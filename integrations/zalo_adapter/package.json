@@ -1,0 +1,15 @@
+{
+  "name": "chatwoot-zalo-adapter",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "zca-js": "file:../../zca-js"
+  },
+  "scripts": {
+    "start": "node src/index.js"
+  }
+}
