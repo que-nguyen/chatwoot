@@ -109,6 +109,10 @@ async function handleChatwootWebhook(payload) {
   if (payload.message_type !== "outgoing") return;
 
   const sourceId = payload?.conversation?.contact_inbox?.source_id;
+  if (!sourceId) {
+    console.warn("Skipping webhook without source_id");
+    return;
+  }
   const thread = parseSourceId(sourceId);
   if (!thread) {
     console.warn("Skipping webhook with unsupported source_id", { sourceId });
@@ -159,13 +163,11 @@ function buildSourceId(thread) {
 function parseSourceId(sourceId) {
   if (!sourceId) return null;
   const match = sourceId.match(/^zalo:(u|g):(.+)$/);
-  if (match) {
-    return {
-      type: match[1] === "g" ? ThreadType.Group : ThreadType.User,
-      id: match[2]
-    };
-  }
-  return { type: ThreadType.User, id: sourceId };
+  if (!match) return null;
+  return {
+    type: match[1] === "g" ? ThreadType.Group : ThreadType.User,
+    id: match[2]
+  };
 }
 
 function normalizeIncomingContent(message, thread) {

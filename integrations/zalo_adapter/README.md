@@ -37,5 +37,6 @@ Optional:
 - Messages are mapped to a Chatwoot API inbox using `source_id` values like:
   - `zalo:u:<threadId>` for user chats
   - `zalo:g:<threadId>` for group chats
+- Webhooks with missing or non-Zalo `source_id` values are ignored.
 - Incoming non-text Zalo content is skipped for now.
 - Outgoing Chatwoot messages with attachments are downloaded and sent as file paths when possible.
