@@ -38,5 +38,6 @@ Optional:
   - `zalo:u:<threadId>` for user chats
   - `zalo:g:<threadId>` for group chats
 - Webhooks with missing or non-Zalo `source_id` values are ignored.
+- Reaction/undo events are forwarded as informational incoming messages (Chatwoot API inbox does not support editing or deleting messages).
 - Incoming Zalo attachment/link payloads are summarized into text and, when a URL is available, downloaded and uploaded to Chatwoot as attachments (best effort).
 - Outgoing Chatwoot messages with attachments are downloaded and sent as file paths when possible.

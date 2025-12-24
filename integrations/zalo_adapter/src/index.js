@@ -26,6 +26,8 @@ async function start() {
 
   api = await loginZalo(zalo);
   api.listener.on("message", (message) => handleIncomingZaloMessage(message));
+  api.listener.on("reaction", (reaction) => handleIncomingZaloReaction(reaction));
+  api.listener.on("undo", (undo) => handleIncomingZaloUndo(undo));
   api.listener.start();
 
   const server = http.createServer(async (req, res) => {
@@ -97,33 +99,52 @@ async function handleIncomingZaloMessage(message) {
   const { content, attachments } = await normalizeIncomingPayload(message, thread);
   const echoId = message?.data?.msgId || message?.data?.cliMsgId;
 
-  try {
-    await chatwoot.ensureContact({
-      sourceId,
-      name: message?.data?.dName || "Zalo User",
-      identifier: sourceId
-    });
+  await syncIncomingToChatwoot({
+    sourceId,
+    thread,
+    content: content || "",
+    echoId,
+    attachments,
+    senderName: message?.data?.dName
+  });
+}
 
-    const conversationId = await chatwoot.getOrCreateConversation(sourceId, {
-      zalo_thread_id: thread.id,
-      zalo_thread_type: thread.type === ThreadType.Group ? "group" : "user"
-    });
+async function handleIncomingZaloReaction(reaction) {
+  if (!reaction || reaction.isSelf) return;
 
-    if (!content && attachments.length === 0) {
-      console.log("Skipping empty Zalo message", { sourceId, echoId });
-      return;
-    }
+  const thread = buildThreadRefFromEvent(reaction);
+  if (!thread) return;
 
-    await chatwoot.createIncomingMessage({
-      sourceId,
-      conversationId,
-      content: content || "",
-      echoId,
-      attachments
-    });
-  } catch (error) {
-    console.error("Failed to sync Zalo message:", error);
-  }
+  const sourceId = buildSourceId(thread);
+  const content = formatReactionContent(reaction, thread);
+  const echoId = buildEventEchoId("reaction", reaction?.data);
+
+  await syncIncomingToChatwoot({
+    sourceId,
+    thread,
+    content,
+    echoId,
+    senderName: reaction?.data?.dName
+  });
+}
+
+async function handleIncomingZaloUndo(undo) {
+  if (!undo || undo.isSelf) return;
+
+  const thread = buildThreadRefFromEvent(undo);
+  if (!thread) return;
+
+  const sourceId = buildSourceId(thread);
+  const content = formatUndoContent(undo, thread);
+  const echoId = buildEventEchoId("undo", undo?.data);
+
+  await syncIncomingToChatwoot({
+    sourceId,
+    thread,
+    content,
+    echoId,
+    senderName: undo?.data?.dName
+  });
 }
 
 async function handleChatwootWebhook(payload) {
@@ -178,6 +199,14 @@ function buildThreadRef(message) {
   return { id: message.threadId, type: threadType };
 }
 
+function buildThreadRefFromEvent(event) {
+  if (!event || !event.threadId) return null;
+  return {
+    id: event.threadId,
+    type: event.isGroup ? ThreadType.Group : ThreadType.User
+  };
+}
+
 function buildSourceId(thread) {
   const prefix = thread.type === ThreadType.Group ? "g" : "u";
   return `zalo:${prefix}:${thread.id}`;
@@ -217,6 +246,78 @@ function normalizeIncomingContent(message, thread) {
   }
 
   return "";
+}
+
+function formatReactionContent(reaction, thread) {
+  const icon = reaction?.data?.content?.rIcon || "";
+  const targets = reaction?.data?.content?.rMsg || [];
+  const targetIds = targets
+    .map((target) => target?.gMsgID || target?.cMsgID)
+    .filter(Boolean);
+  const targetLabel = targetIds.length > 0 ? ` on message ${targetIds.join(", ")}` : "";
+  const baseText = `Reaction ${icon}`.trim() + targetLabel;
+  const sender = reaction?.data?.dName || reaction?.data?.uidFrom;
+  return prefixGroupSenderId(thread, sender, baseText);
+}
+
+function formatUndoContent(undo, thread) {
+  const target =
+    undo?.data?.content?.globalMsgId ||
+    undo?.data?.realMsgId ||
+    undo?.data?.msgId ||
+    undo?.data?.cliMsgId;
+  const baseText = target ? `Message removed (${target})` : "Message removed";
+  const sender = undo?.data?.dName || undo?.data?.uidFrom;
+  return prefixGroupSenderId(thread, sender, baseText);
+}
+
+function buildEventEchoId(prefix, data) {
+  const id = data?.actionId || data?.msgId || data?.cliMsgId || data?.realMsgId;
+  return id ? `${prefix}:${id}` : undefined;
+}
+
+function prefixGroupSenderId(thread, senderId, text) {
+  if (thread?.type === ThreadType.Group && senderId && text) {
+    return `[${senderId}] ${text}`;
+  }
+  return text;
+}
+
+async function syncIncomingToChatwoot({
+  sourceId,
+  thread,
+  content,
+  echoId,
+  attachments = [],
+  senderName
+}) {
+  try {
+    await chatwoot.ensureContact({
+      sourceId,
+      name: senderName || "Zalo User",
+      identifier: sourceId
+    });
+
+    const conversationId = await chatwoot.getOrCreateConversation(sourceId, {
+      zalo_thread_id: thread.id,
+      zalo_thread_type: thread.type === ThreadType.Group ? "group" : "user"
+    });
+
+    if (!content && attachments.length === 0) {
+      console.log("Skipping empty Zalo event", { sourceId, echoId });
+      return;
+    }
+
+    await chatwoot.createIncomingMessage({
+      sourceId,
+      conversationId,
+      content: content || "",
+      echoId,
+      attachments
+    });
+  } catch (error) {
+    console.error("Failed to sync Zalo event:", error);
+  }
 }
 
 function prefixGroupSender(thread, message, text) {
