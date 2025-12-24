@@ -11,7 +11,7 @@ This adapter connects Zalo Web (via `zca-js`) to a Chatwoot API inbox.
 1. Create a Chatwoot API inbox and copy its `identifier`.
 2. Set the inbox `webhook_url` to this adapter (example: `http://localhost:3001/webhooks/chatwoot/secret`).
 3. Install dependencies from this folder:
-   - `npm install` (uses local `file:../../zca-js`)
+   - `npm install` (uses local `file:../../../zca-js`)
 4. Provide environment variables (see below) and start:
    - `npm start`
 
