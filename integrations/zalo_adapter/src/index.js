@@ -2,12 +2,14 @@ import { Zalo, ThreadType } from "zca-js";
 import crypto from "crypto";
 import fs from "fs";
 import http from "http";
+import imageSizeModule from "image-size";
 import os from "os";
 import path from "path";
 
 const config = loadConfig();
 const chatwoot = new ChatwootClient(config);
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "chatwoot-zalo-"));
+const imageSize = typeof imageSizeModule === "function" ? imageSizeModule : imageSizeModule.imageSize;
 let api;
 
 await start();
@@ -18,7 +20,8 @@ async function start() {
   const zalo = new Zalo({
     selfListen: config.zaloSelfListen,
     checkUpdate: config.zaloCheckUpdate,
-    logging: config.zaloLogging
+    logging: config.zaloLogging,
+    imageMetadataGetter
   });
 
   api = await loginZalo(zalo);
@@ -48,6 +51,25 @@ async function start() {
   server.listen(config.port, () => {
     console.log(`Zalo adapter listening on :${config.port}${config.chatwootWebhookPath}`);
   });
+}
+
+async function imageMetadataGetter(filePath) {
+  try {
+    const buffer = await fs.promises.readFile(filePath);
+    const metadata = imageSize(buffer);
+    if (!metadata || !metadata.width || !metadata.height) {
+      return null;
+    }
+
+    return {
+      width: metadata.width,
+      height: metadata.height,
+      size: buffer.length
+    };
+  } catch (error) {
+    console.warn("Failed to read image metadata", filePath, error?.message || error);
+    return null;
+  }
 }
 
 async function loginZalo(zalo) {
