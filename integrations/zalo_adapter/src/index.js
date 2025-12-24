@@ -28,6 +28,7 @@ async function start() {
   api.listener.on("message", (message) => handleIncomingZaloMessage(message));
   api.listener.on("reaction", (reaction) => handleIncomingZaloReaction(reaction));
   api.listener.on("undo", (undo) => handleIncomingZaloUndo(undo));
+  api.listener.on("group_event", (event) => handleIncomingZaloGroupEvent(event));
   api.listener.start();
 
   const server = http.createServer(async (req, res) => {
@@ -144,6 +145,26 @@ async function handleIncomingZaloUndo(undo) {
     content,
     echoId,
     senderName: undo?.data?.dName
+  });
+}
+
+async function handleIncomingZaloGroupEvent(event) {
+  if (!event || event.isSelf) return;
+  if (!event.threadId) return;
+
+  const thread = { id: event.threadId, type: ThreadType.Group };
+  const sourceId = buildSourceId(thread);
+  const content = formatGroupEventContent(event, thread);
+  const echoId = buildGroupEventEchoId(event);
+
+  if (!content) return;
+
+  await syncIncomingToChatwoot({
+    sourceId,
+    thread,
+    content,
+    echoId,
+    senderName: event?.data?.groupName
   });
 }
 
@@ -271,9 +292,73 @@ function formatUndoContent(undo, thread) {
   return prefixGroupSenderId(thread, sender, baseText);
 }
 
+function formatGroupEventContent(event, thread) {
+  const type = event?.type || "unknown";
+  const label = groupEventLabel(type);
+  const members = extractGroupEventMembers(event);
+  const memberText = members.length > 0 ? ` - ${members.join(", ")}` : "";
+  const baseText = `${label}${memberText}`.trim();
+  if (!baseText) return "";
+  return prefixGroupSenderId(thread, event?.act, baseText);
+}
+
+function extractGroupEventMembers(event) {
+  const data = event?.data;
+  if (Array.isArray(data?.updateMembers)) {
+    return data.updateMembers
+      .map((member) => {
+        if (typeof member === "string") return member;
+        return member?.dName || member?.id;
+      })
+      .filter(Boolean);
+  }
+  if (Array.isArray(data?.uids)) {
+    return data.uids.filter(Boolean);
+  }
+  return [];
+}
+
+function groupEventLabel(type) {
+  const labels = {
+    join_request: "Join request",
+    join: "Member joined",
+    leave: "Member left",
+    remove_member: "Member removed",
+    block_member: "Member blocked",
+    update_setting: "Group settings updated",
+    update: "Group updated",
+    new_link: "New group link created",
+    add_admin: "Member promoted to admin",
+    remove_admin: "Admin removed",
+    new_pin_topic: "Pinned topic added",
+    update_pin_topic: "Pinned topic updated",
+    reorder_pin_topic: "Pinned topics reordered",
+    update_board: "Board updated",
+    remove_board: "Board removed",
+    update_topic: "Topic updated",
+    unpin_topic: "Topic unpinned",
+    remove_topic: "Topic removed",
+    accept_remind: "Reminder accepted",
+    reject_remind: "Reminder rejected",
+    remind_topic: "Reminder created",
+    update_avatar: "Group avatar updated",
+    unknown: "Group event"
+  };
+
+  if (!type) return "Group event";
+  return labels[type] || `Group event (${type})`;
+}
+
 function buildEventEchoId(prefix, data) {
   const id = data?.actionId || data?.msgId || data?.cliMsgId || data?.realMsgId;
   return id ? `${prefix}:${id}` : undefined;
+}
+
+function buildGroupEventEchoId(event) {
+  const time = event?.data?.time || event?.data?.createTime || event?.data?.editTime;
+  const parts = ["group_event", event?.type, event?.threadId, time].filter(Boolean);
+  if (parts.length <= 2) return undefined;
+  return parts.map((part) => String(part).replace(/\s+/g, "_")).join(":");
 }
 
 function prefixGroupSenderId(thread, senderId, text) {
