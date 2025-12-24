@@ -72,7 +72,7 @@ async function handleIncomingZaloMessage(message) {
 
   const thread = buildThreadRef(message);
   const sourceId = buildSourceId(thread);
-  const content = normalizeIncomingContent(message, thread);
+  const { content, attachments } = await normalizeIncomingPayload(message, thread);
   const echoId = message?.data?.msgId || message?.data?.cliMsgId;
 
   try {
@@ -87,7 +87,7 @@ async function handleIncomingZaloMessage(message) {
       zalo_thread_type: thread.type === ThreadType.Group ? "group" : "user"
     });
 
-    if (!content) {
+    if (!content && attachments.length === 0) {
       console.log("Skipping empty Zalo message", { sourceId, echoId });
       return;
     }
@@ -95,8 +95,9 @@ async function handleIncomingZaloMessage(message) {
     await chatwoot.createIncomingMessage({
       sourceId,
       conversationId,
-      content,
-      echoId
+      content: content || "",
+      echoId,
+      attachments
     });
   } catch (error) {
     console.error("Failed to sync Zalo message:", error);
@@ -170,15 +171,99 @@ function parseSourceId(sourceId) {
   };
 }
 
+async function normalizeIncomingPayload(message, thread) {
+  const content = normalizeIncomingContent(message, thread);
+  const attachmentTargets = extractIncomingAttachmentTargets(message);
+  if (attachmentTargets.length === 0) {
+    return { content, attachments: [] };
+  }
+
+  const attachments = await downloadIncomingAttachments(attachmentTargets);
+  const fallback = content || buildAttachmentFallback(message, thread, attachmentTargets);
+  return { content: fallback, attachments };
+}
+
 function normalizeIncomingContent(message, thread) {
   const content = message?.data?.content;
   if (typeof content === "string") {
-    if (thread.type === ThreadType.Group && message?.data?.uidFrom) {
-      return `[${message.data.uidFrom}] ${content}`;
-    }
-    return content;
+    return prefixGroupSender(thread, message, content);
   }
+
+  if (content && typeof content === "object") {
+    const summary = buildAttachmentSummary(content);
+    return summary ? prefixGroupSender(thread, message, summary) : "";
+  }
+
   return "";
+}
+
+function prefixGroupSender(thread, message, text) {
+  if (thread.type === ThreadType.Group && message?.data?.uidFrom && text) {
+    return `[${message.data.uidFrom}] ${text}`;
+  }
+  return text;
+}
+
+function extractIncomingAttachmentTargets(message) {
+  const content = message?.data?.content;
+  if (!content || typeof content !== "object") return [];
+
+  const href = typeof content.href === "string" ? content.href : "";
+  const thumb = typeof content.thumb === "string" ? content.thumb : "";
+  if (href) return [{ url: href }];
+  if (thumb) return [{ url: thumb }];
+  return [];
+}
+
+function buildAttachmentSummary(content) {
+  if (!content || typeof content !== "object") return "";
+  const title = typeof content.title === "string" ? content.title.trim() : "";
+  const description = typeof content.description === "string" ? content.description.trim() : "";
+  const href = typeof content.href === "string" ? content.href.trim() : "";
+  const parts = [title, description, href].filter(Boolean);
+  return parts.join(" - ");
+}
+
+function buildAttachmentFallback(message, thread, attachmentTargets) {
+  const urls = attachmentTargets.map((target) => target.url).filter(Boolean);
+  if (urls.length === 0) return "";
+  const text = `Attachment: ${urls.join(" ")}`;
+  return prefixGroupSender(thread, message, text);
+}
+
+async function downloadIncomingAttachments(targets) {
+  const unique = Array.from(new Set(targets.map((target) => target.url).filter(Boolean)));
+  if (unique.length === 0) return [];
+
+  const batchId = Date.now();
+  const results = await Promise.allSettled(
+    unique.map(async (url, index) => {
+      const response = await fetch(url, { redirect: "follow" });
+      if (!response.ok) {
+        throw new Error(`Incoming attachment download failed (${response.status})`);
+      }
+
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const contentType = response.headers.get("content-type") || "application/octet-stream";
+      const ext = extensionFromUrl(url) || extensionFromContentType(contentType) || "bin";
+      const filename = `zalo-attachment-${batchId}-${index}.${ext}`;
+      return { buffer, contentType, filename };
+    })
+  );
+
+  const attachments = [];
+  results.forEach((result, index) => {
+    if (result.status === "fulfilled") {
+      attachments.push(result.value);
+      return;
+    }
+    console.warn("Failed to download Zalo attachment", {
+      url: unique[index],
+      error: result.reason?.message || result.reason
+    });
+  });
+
+  return attachments;
 }
 
 async function downloadAttachments(attachments) {
@@ -224,6 +309,23 @@ function extensionFromUrl(url) {
   } catch {
     return null;
   }
+}
+
+function extensionFromContentType(contentType) {
+  const type = (contentType || "").split(";")[0].trim().toLowerCase();
+  const map = {
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "image/gif": "gif",
+    "image/webp": "webp",
+    "video/mp4": "mp4",
+    "audio/mpeg": "mp3",
+    "audio/ogg": "ogg",
+    "audio/wav": "wav",
+    "application/pdf": "pdf"
+  };
+  return map[type] || null;
 }
 
 async function readJson(req) {
@@ -308,7 +410,15 @@ class ChatwootClient {
     return created.id;
   }
 
-  async createIncomingMessage({ sourceId, conversationId, content, echoId }) {
+  async createIncomingMessage({ sourceId, conversationId, content, echoId, attachments = [] }) {
+    if (attachments.length > 0) {
+      return this.requestMultipart(this.messagesUrl(sourceId, conversationId), {
+        content,
+        echoId,
+        attachments
+      });
+    }
+
     const payload = {
       content,
       echo_id: echoId
@@ -343,6 +453,38 @@ class ChatwootClient {
         Accept: "application/json"
       },
       body: options.body ? JSON.stringify(options.body) : undefined
+    });
+
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : null;
+    if (!response.ok) {
+      throw new Error(`Chatwoot request failed (${response.status}): ${text}`);
+    }
+
+    return data;
+  }
+
+  async requestMultipart(url, { content, echoId, attachments }) {
+    const form = new FormData();
+    if (content !== undefined) {
+      form.append("content", content);
+    }
+    if (echoId) {
+      form.append("echo_id", echoId);
+    }
+    attachments.forEach((attachment) => {
+      const file = new Blob([attachment.buffer], {
+        type: attachment.contentType || "application/octet-stream"
+      });
+      form.append("attachments[]", file, attachment.filename || "attachment.bin");
+    });
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Accept: "application/json"
+      },
+      body: form
     });
 
     const text = await response.text();

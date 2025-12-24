@@ -38,5 +38,5 @@ Optional:
   - `zalo:u:<threadId>` for user chats
   - `zalo:g:<threadId>` for group chats
 - Webhooks with missing or non-Zalo `source_id` values are ignored.
-- Incoming non-text Zalo content is skipped for now.
+- Incoming Zalo attachment/link payloads are summarized into text and, when a URL is available, downloaded and uploaded to Chatwoot as attachments (best effort).
 - Outgoing Chatwoot messages with attachments are downloaded and sent as file paths when possible.
