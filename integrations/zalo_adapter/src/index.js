@@ -271,11 +271,14 @@ async function downloadAttachments(attachments) {
     if (!attachment || !attachment.data_url) return false;
     return ["image", "audio", "video", "file"].includes(attachment.file_type);
   });
+  if (supported.length === 0) return [];
 
-  const downloads = supported.map(async (attachment) => {
+  const batchId = Date.now();
+  const downloads = supported.map(async (attachment, index) => {
     const url = attachment.data_url;
     const ext = attachment.extension || extensionFromUrl(url) || "bin";
-    const filename = `attachment-${attachment.id || Date.now()}.${ext}`;
+    const idPart = attachment.id || `${batchId}-${index}`;
+    const filename = `attachment-${idPart}.${ext}`;
     const filePath = path.join(tempRoot, filename);
 
     const response = await fetch(url, { redirect: "follow" });
@@ -288,7 +291,21 @@ async function downloadAttachments(attachments) {
     return filePath;
   });
 
-  return Promise.all(downloads);
+  const results = await Promise.allSettled(downloads);
+  const files = [];
+  results.forEach((result, index) => {
+    if (result.status === "fulfilled") {
+      files.push(result.value);
+      return;
+    }
+    console.warn("Failed to download Chatwoot attachment", {
+      id: supported[index]?.id,
+      url: supported[index]?.data_url,
+      error: result.reason?.message || result.reason
+    });
+  });
+
+  return files;
 }
 
 function cleanupFiles(files) {
