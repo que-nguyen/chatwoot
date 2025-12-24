@@ -262,29 +262,41 @@ function parseSourceId(sourceId) {
 }
 
 async function normalizeIncomingPayload(message, thread) {
-  const content = normalizeIncomingContent(message, thread);
+  const content = normalizeIncomingContent(message);
   const attachmentTargets = extractIncomingAttachmentTargets(message);
   if (attachmentTargets.length === 0) {
-    return { content, attachments: [] };
+    return { content: prefixGroupSender(thread, message, content), attachments: [] };
   }
 
   const attachments = await downloadIncomingAttachments(attachmentTargets);
-  const fallback = content || buildAttachmentFallback(message, thread, attachmentTargets);
-  return { content: fallback, attachments };
+  const fallback = content || buildAttachmentFallback(message, attachmentTargets);
+  return { content: prefixGroupSender(thread, message, fallback), attachments };
 }
 
-function normalizeIncomingContent(message, thread) {
+function normalizeIncomingContent(message) {
   const content = message?.data?.content;
+  const quote = buildQuoteSummary(message);
+  let base = "";
   if (typeof content === "string") {
-    return prefixGroupSender(thread, message, content);
+    base = content;
+  } else if (content && typeof content === "object") {
+    base = buildAttachmentSummary(content);
   }
 
-  if (content && typeof content === "object") {
-    const summary = buildAttachmentSummary(content);
-    return summary ? prefixGroupSender(thread, message, summary) : "";
-  }
+  if (!quote) return base;
+  if (!base) return quote;
+  return `${quote}
+${base}`;
+}
 
-  return "";
+function buildQuoteSummary(message) {
+  const quote = message?.data?.quote;
+  if (!quote) return "";
+  const quoted = typeof quote.msg === "string" ? quote.msg.trim() : "";
+  if (!quoted) return "";
+  const from = typeof quote.fromD === "string" && quote.fromD.trim() ? quote.fromD.trim() : quote.ownerId;
+  const prefix = from ? `Replying to ${from}: ` : "Replying to: ";
+  return `${prefix}${quoted}`.trim();
 }
 
 function formatReactionContent(reaction, thread) {
@@ -471,21 +483,57 @@ async function syncIncomingToChatwoot({
 }
 
 function prefixGroupSender(thread, message, text) {
-  if (thread.type === ThreadType.Group && message?.data?.uidFrom && text) {
-    return `[${message.data.uidFrom}] ${text}`;
-  }
-  return text;
+  if (thread?.type !== ThreadType.Group || !text) return text;
+  const sender = getSenderLabel(message);
+  return sender ? `[${sender}] ${text}` : text;
+}
+
+function getSenderLabel(message) {
+  const name = typeof message?.data?.dName === "string" ? message.data.dName.trim() : "";
+  if (name) return name;
+  return message?.data?.uidFrom || "";
 }
 
 function extractIncomingAttachmentTargets(message) {
   const content = message?.data?.content;
   if (!content || typeof content !== "object") return [];
 
-  const href = typeof content.href === "string" ? content.href : "";
-  const thumb = typeof content.thumb === "string" ? content.thumb : "";
-  if (href) return [{ url: href }];
-  if (thumb) return [{ url: thumb }];
-  return [];
+  const targets = [];
+  const href = typeof content.href === "string" ? content.href.trim() : "";
+  const thumb = typeof content.thumb === "string" ? content.thumb.trim() : "";
+  if (href) targets.push({ url: href });
+  if (thumb) targets.push({ url: thumb });
+
+  const paramUrl = extractUrlFromParams(content.params);
+  if (paramUrl) targets.push({ url: paramUrl });
+
+  const seen = new Set();
+  return targets.filter((target) => {
+    if (!target.url) return false;
+    if (seen.has(target.url)) return false;
+    seen.add(target.url);
+    return true;
+  });
+}
+
+function extractUrlFromParams(params) {
+  if (typeof params !== "string") return "";
+  try {
+    const parsed = JSON.parse(params);
+    const candidates = [
+      parsed?.href,
+      parsed?.thumb,
+      parsed?.normalUrl,
+      parsed?.oriUrl,
+      parsed?.hdUrl,
+      parsed?.fileUrl,
+      parsed?.url
+    ];
+    const url = candidates.find((value) => typeof value === "string" && value.trim());
+    return url ? url.trim() : "";
+  } catch {
+    return "";
+  }
 }
 
 function buildAttachmentSummary(content) {
@@ -497,11 +545,10 @@ function buildAttachmentSummary(content) {
   return parts.join(" - ");
 }
 
-function buildAttachmentFallback(message, thread, attachmentTargets) {
+function buildAttachmentFallback(message, attachmentTargets) {
   const urls = attachmentTargets.map((target) => target.url).filter(Boolean);
   if (urls.length === 0) return "";
-  const text = `Attachment: ${urls.join(" ")}`;
-  return prefixGroupSender(thread, message, text);
+  return `Attachment: ${urls.join(" ")}`;
 }
 
 async function downloadIncomingAttachments(targets) {
