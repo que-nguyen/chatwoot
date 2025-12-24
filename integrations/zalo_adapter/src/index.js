@@ -11,6 +11,8 @@ const chatwoot = new ChatwootClient(config);
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "chatwoot-zalo-"));
 const imageSize = typeof imageSizeModule === "function" ? imageSizeModule : imageSizeModule.imageSize;
 let api;
+const groupNameCache = new Map();
+const groupNamePending = new Map();
 
 await start();
 
@@ -99,6 +101,10 @@ async function handleIncomingZaloMessage(message) {
   const sourceId = buildSourceId(thread);
   const { content, attachments } = await normalizeIncomingPayload(message, thread);
   const echoId = message?.data?.msgId || message?.data?.cliMsgId;
+  const contactName = await resolveContactName({
+    thread,
+    senderName: message?.data?.dName
+  });
 
   await syncIncomingToChatwoot({
     sourceId,
@@ -106,7 +112,7 @@ async function handleIncomingZaloMessage(message) {
     content: content || "",
     echoId,
     attachments,
-    senderName: message?.data?.dName
+    contactName
   });
 }
 
@@ -119,13 +125,17 @@ async function handleIncomingZaloReaction(reaction) {
   const sourceId = buildSourceId(thread);
   const content = formatReactionContent(reaction, thread);
   const echoId = buildEventEchoId("reaction", reaction?.data);
+  const contactName = await resolveContactName({
+    thread,
+    senderName: reaction?.data?.dName
+  });
 
   await syncIncomingToChatwoot({
     sourceId,
     thread,
     content,
     echoId,
-    senderName: reaction?.data?.dName
+    contactName
   });
 }
 
@@ -138,13 +148,17 @@ async function handleIncomingZaloUndo(undo) {
   const sourceId = buildSourceId(thread);
   const content = formatUndoContent(undo, thread);
   const echoId = buildEventEchoId("undo", undo?.data);
+  const contactName = await resolveContactName({
+    thread,
+    senderName: undo?.data?.dName
+  });
 
   await syncIncomingToChatwoot({
     sourceId,
     thread,
     content,
     echoId,
-    senderName: undo?.data?.dName
+    contactName
   });
 }
 
@@ -156,6 +170,10 @@ async function handleIncomingZaloGroupEvent(event) {
   const sourceId = buildSourceId(thread);
   const content = formatGroupEventContent(event, thread);
   const echoId = buildGroupEventEchoId(event);
+  const contactName = await resolveContactName({
+    thread,
+    groupName: event?.data?.groupName
+  });
 
   if (!content) return;
 
@@ -164,7 +182,7 @@ async function handleIncomingZaloGroupEvent(event) {
     thread,
     content,
     echoId,
-    senderName: event?.data?.groupName
+    contactName
   });
 }
 
@@ -361,6 +379,53 @@ function buildGroupEventEchoId(event) {
   return parts.map((part) => String(part).replace(/\s+/g, "_")).join(":");
 }
 
+async function resolveContactName({ thread, senderName, groupName }) {
+  if (!thread) return senderName || "Zalo User";
+  if (thread.type !== ThreadType.Group) return senderName || "Zalo User";
+
+  if (groupName) {
+    groupNameCache.set(thread.id, groupName);
+    return groupName;
+  }
+
+  const cached = groupNameCache.get(thread.id);
+  if (cached) return cached;
+
+  const fetched = await resolveGroupName(thread.id);
+  if (fetched) return fetched;
+
+  return `Zalo Group ${thread.id}`;
+}
+
+async function resolveGroupName(threadId) {
+  if (!threadId) return null;
+
+  const cached = groupNameCache.get(threadId);
+  if (cached) return cached;
+
+  const pending = groupNamePending.get(threadId);
+  if (pending) return pending;
+
+  const task = (async () => {
+    if (!api || typeof api.getGroupInfo !== "function") return null;
+    try {
+      const response = await api.getGroupInfo(threadId);
+      const info = response?.gridInfoMap?.[threadId];
+      const name = info?.name || info?.groupName;
+      if (name) groupNameCache.set(threadId, name);
+      return name || null;
+    } catch (error) {
+      console.warn("Failed to fetch Zalo group info", threadId, error?.message || error);
+      return null;
+    } finally {
+      groupNamePending.delete(threadId);
+    }
+  })();
+
+  groupNamePending.set(threadId, task);
+  return task;
+}
+
 function prefixGroupSenderId(thread, senderId, text) {
   if (thread?.type === ThreadType.Group && senderId && text) {
     return `[${senderId}] ${text}`;
@@ -374,12 +439,12 @@ async function syncIncomingToChatwoot({
   content,
   echoId,
   attachments = [],
-  senderName
+  contactName
 }) {
   try {
     await chatwoot.ensureContact({
       sourceId,
-      name: senderName || "Zalo User",
+      name: contactName || "Zalo User",
       identifier: sourceId
     });
 
