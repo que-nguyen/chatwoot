@@ -1,3 +1,4 @@
 cookie.json
 .env
 .env.*
+!.env.example

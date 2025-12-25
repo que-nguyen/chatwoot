@@ -45,6 +45,58 @@ Each account object can override any single-account setting using camelCase keys
 When multiple accounts are configured and no per-account webhook path is provided,
 paths default to `/webhooks/chatwoot/<index>` (1-based).
 
+## Example .env
+```bash
+PORT=3001
+CHATWOOT_BASE_URL=http://localhost:3000
+CHATWOOT_INBOX_IDENTIFIER=your_api_inbox_identifier
+CHATWOOT_WEBHOOK_PATH=/webhooks/chatwoot
+CHATWOOT_HMAC_TOKEN=
+
+ZALO_LOGIN_MODE=cookie
+ZALO_COOKIE_PATH=./cookie.json
+ZALO_COOKIE_JSON=
+ZALO_IMEI=your_imei
+ZALO_USER_AGENT=your_user_agent
+ZALO_SELF_LISTEN=false
+ZALO_CHECK_UPDATE=true
+ZALO_LOGGING=true
+
+# Multi-account (optional)
+ZALO_ACCOUNTS_PATH=./accounts.json
+# ZALO_ACCOUNTS_JSON=[{"label":"sales","chatwootInboxIdentifier":"..."}]
+```
+
+## Example accounts.json
+```json
+[
+  {
+    "label": "sales",
+    "chatwootInboxIdentifier": "your_inbox_identifier_1",
+    "chatwootWebhookPath": "/webhooks/chatwoot/sales",
+    "zaloLoginMode": "cookie",
+    "zaloCookiePath": "./cookie-sales.json",
+    "zaloImei": "imei_sales",
+    "zaloUserAgent": "user_agent_sales"
+  },
+  {
+    "label": "support",
+    "chatwootInboxIdentifier": "your_inbox_identifier_2",
+    "chatwootWebhookPath": "/webhooks/chatwoot/support",
+    "zaloLoginMode": "qr",
+    "zaloSelfListen": false,
+    "zaloCheckUpdate": true,
+    "zaloLogging": true
+  }
+]
+```
+
+Sample file: `accounts.sample.json`.
+
+Note: shared settings like `CHATWOOT_BASE_URL` and `CHATWOOT_HMAC_TOKEN` can stay
+in `.env`, while each account overrides only what differs.
+
+
 ## Notes
 - Messages are mapped to a Chatwoot API inbox using `source_id` values like:
   - `zalo:u:<threadId>` for user chats

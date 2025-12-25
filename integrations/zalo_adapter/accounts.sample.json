@@ -1,0 +1,20 @@
+[
+  {
+    "label": "sales",
+    "chatwootInboxIdentifier": "your_inbox_identifier_1",
+    "chatwootWebhookPath": "/webhooks/chatwoot/sales",
+    "zaloLoginMode": "cookie",
+    "zaloCookiePath": "./cookie-sales.json",
+    "zaloImei": "imei_sales",
+    "zaloUserAgent": "user_agent_sales"
+  },
+  {
+    "label": "support",
+    "chatwootInboxIdentifier": "your_inbox_identifier_2",
+    "chatwootWebhookPath": "/webhooks/chatwoot/support",
+    "zaloLoginMode": "qr",
+    "zaloSelfListen": false,
+    "zaloCheckUpdate": true,
+    "zaloLogging": true
+  }
+]
