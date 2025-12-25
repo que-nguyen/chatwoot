@@ -6,7 +6,8 @@
     "zaloLoginMode": "cookie",
     "zaloCookiePath": "./cookie-sales.json",
     "zaloImei": "imei_sales",
-    "zaloUserAgent": "user_agent_sales"
+    "zaloUserAgent": "user_agent_sales",
+    "zaloProxyUrl": "http://proxy.local:8080"
   },
   {
     "label": "support",

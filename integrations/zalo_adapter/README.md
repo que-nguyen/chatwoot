@@ -33,6 +33,7 @@ Optional:
 - `ZALO_SELF_LISTEN` (`true` or `false`, default: `false`)
 - `ZALO_CHECK_UPDATE` (`true` or `false`, default: `true`)
 - `ZALO_LOGGING` (`true` or `false`, default: `true`)
+- `ZALO_PROXY_URL` (proxy URL for Zalo requests, optional)
 
 Multi-account (optional):
 - `ZALO_ACCOUNTS_JSON` (JSON array of account objects)
@@ -41,7 +42,7 @@ Multi-account (optional):
 Each account object can override any single-account setting using camelCase keys, for example:
 `chatwootBaseUrl`, `chatwootInboxIdentifier`, `chatwootWebhookPath`, `chatwootHmacToken`,
 `zaloLoginMode`, `zaloCookiePath`, `zaloCookieJson`, `zaloQrPath`, `zaloImei`, `zaloUserAgent`,
-`zaloSelfListen`, `zaloCheckUpdate`, `zaloLogging`, and optional `name`/`label` for logs.
+`zaloSelfListen`, `zaloCheckUpdate`, `zaloLogging`, `zaloProxyUrl`, and optional `name`/`label` for logs.
 
 When multiple accounts are configured and no per-account webhook path is provided,
 paths default to `/webhooks/chatwoot/<index>` (1-based).
@@ -63,6 +64,7 @@ ZALO_USER_AGENT=your_user_agent
 ZALO_SELF_LISTEN=false
 ZALO_CHECK_UPDATE=true
 ZALO_LOGGING=true
+ZALO_PROXY_URL=
 
 # Multi-account (optional)
 ZALO_ACCOUNTS_PATH=./accounts.json

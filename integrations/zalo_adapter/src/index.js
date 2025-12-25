@@ -5,6 +5,7 @@ import http from "http";
 import imageSizeModule from "image-size";
 import os from "os";
 import path from "path";
+import { ProxyAgent } from "undici";
 
 const DEFAULT_WEBHOOK_PATH = "/webhooks/chatwoot";
 const DEFAULT_QR_PATH = "./qr.png";
@@ -31,12 +32,7 @@ async function start() {
 }
 
 async function startAccount(account) {
-  const zalo = new Zalo({
-    selfListen: account.config.zaloSelfListen,
-    checkUpdate: account.config.zaloCheckUpdate,
-    logging: account.config.zaloLogging,
-    imageMetadataGetter
-  });
+  const zalo = new Zalo(buildZaloOptions(account));
 
   account.api = await loginZalo(zalo, account);
   account.api.listener.on("message", (message) => handleIncomingZaloMessage(account, message));
@@ -46,6 +42,45 @@ async function startAccount(account) {
   account.api.listener.on("typing", (typing) => handleIncomingZaloTyping(account, typing));
   account.api.listener.on("seen_messages", (messages) => handleIncomingZaloSeen(account, messages));
   account.api.listener.start();
+}
+
+function buildZaloOptions(account) {
+  const options = {
+    selfListen: account.config.zaloSelfListen,
+    checkUpdate: account.config.zaloCheckUpdate,
+    logging: account.config.zaloLogging,
+    imageMetadataGetter
+  };
+
+  const proxyUrl = (account.config.zaloProxyUrl || "").trim();
+  if (!proxyUrl) return options;
+
+  const agent = createProxyAgent(proxyUrl, account.label);
+  if (!agent) return options;
+
+  options.agent = agent;
+  options.polyfill = createProxyAwareFetch();
+  return options;
+}
+
+function createProxyAgent(proxyUrl, label) {
+  try {
+    return new ProxyAgent(proxyUrl);
+  } catch (error) {
+    const prefix = label ? `[${label}] ` : "";
+    console.warn(`${prefix}Failed to create proxy agent`, error?.message || error);
+    return null;
+  }
+}
+
+function createProxyAwareFetch() {
+  return (url, options = {}) => {
+    if (!options || !options.agent) return fetch(url, options);
+
+    const { agent, ...rest } = options;
+    if (rest.dispatcher) return fetch(url, rest);
+    return fetch(url, { ...rest, dispatcher: agent });
+  };
 }
 
 function createServer(accounts) {
@@ -975,6 +1010,7 @@ function loadConfig() {
     zaloSelfListen: parseBool(process.env.ZALO_SELF_LISTEN, false),
     zaloCheckUpdate: parseBool(process.env.ZALO_CHECK_UPDATE, true),
     zaloLogging: parseBool(process.env.ZALO_LOGGING, true),
+    zaloProxyUrl: process.env.ZALO_PROXY_URL || "",
     zaloAccountsJson: process.env.ZALO_ACCOUNTS_JSON || "",
     zaloAccountsPath: process.env.ZALO_ACCOUNTS_PATH || ""
   };
