@@ -113,12 +113,13 @@ function createServer(accounts) {
 }
 
 function buildAccounts(baseConfig) {
-  const rawAccounts = loadAccountsFromEnv(baseConfig);
+  const { accounts: rawAccounts, baseDir } = loadAccountsFromEnv(baseConfig);
   const items = rawAccounts.length > 0 ? rawAccounts : [{}];
   const total = items.length;
 
   return items.map((raw, index) => {
-    const config = mergeAccountConfig(baseConfig, raw, index, total);
+    const resolvedRaw = resolveAccountPaths(raw, baseDir);
+    const config = mergeAccountConfig(baseConfig, resolvedRaw, index, total);
     const label = resolveAccountLabel(raw, index, config);
     return {
       id: raw?.id || raw?.name || `account-${index + 1}`,
@@ -220,11 +221,14 @@ function normalizeBaseUrl(value) {
 function loadAccountsFromEnv(baseConfig) {
   const jsonValue = baseConfig.zaloAccountsJson || "";
   const pathValue = baseConfig.zaloAccountsPath || "";
-  if (!jsonValue && !pathValue) return [];
+  if (!jsonValue && !pathValue) return { accounts: [], baseDir: "" };
 
   let raw = jsonValue;
+  let baseDir = "";
   if (!raw) {
-    raw = fs.readFileSync(pathValue, "utf-8");
+    const resolvedPath = path.resolve(pathValue);
+    raw = fs.readFileSync(resolvedPath, "utf-8");
+    baseDir = path.dirname(resolvedPath);
   }
 
   const parsed = JSON.parse(raw);
@@ -232,8 +236,25 @@ function loadAccountsFromEnv(baseConfig) {
     throw new Error("ZALO_ACCOUNTS_JSON/PATH must be a JSON array");
   }
 
-  return parsed;
+  return { accounts: parsed, baseDir };
 }
+
+function resolveAccountPaths(raw, baseDir) {
+  if (!raw || !baseDir) return raw || {};
+
+  return {
+    ...raw,
+    zaloCookiePath: resolvePathFromBase(baseDir, raw?.zaloCookiePath),
+    zaloQrPath: resolvePathFromBase(baseDir, raw?.zaloQrPath)
+  };
+}
+
+function resolvePathFromBase(baseDir, value) {
+  if (!baseDir || !value || typeof value !== "string") return value;
+  if (path.isAbsolute(value)) return value;
+  return path.join(baseDir, value);
+}
+
 
 async function imageMetadataGetter(filePath) {
   try {

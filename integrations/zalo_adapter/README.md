@@ -47,6 +47,9 @@ Each account object can override any single-account setting using camelCase keys
 When multiple accounts are configured and no per-account webhook path is provided,
 paths default to `/webhooks/chatwoot/<index>` (1-based).
 
+When using `ZALO_ACCOUNTS_PATH`, relative `zaloCookiePath`/`zaloQrPath` values
+are resolved relative to the accounts file directory.
+
 ## Example .env
 ```bash
 PORT=3001
