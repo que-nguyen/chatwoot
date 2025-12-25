@@ -111,6 +111,7 @@ in `.env`, while each account overrides only what differs.
   - `zalo:u:<threadId>` for user chats
   - `zalo:g:<threadId>` for group chats
 - Webhooks with missing or non-Zalo `source_id` values are ignored.
+- Cookie login requires `ZALO_COOKIE_JSON` or a readable file at `ZALO_COOKIE_PATH`.
 - QR logins persist cookies to `ZALO_COOKIE_PATH` (so you can switch to cookie mode later).
 - When multiple accounts are configured and no per-account cookie/QR paths are provided, the adapter auto-suffixes them (e.g. `cookie-1.json`, `qr-2.png`).
 - Reaction/undo events are forwarded as informational incoming messages (Chatwoot API inbox does not support editing or deleting messages).

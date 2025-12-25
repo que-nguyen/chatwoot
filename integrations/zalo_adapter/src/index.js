@@ -300,8 +300,7 @@ async function loginZalo(zalo, account) {
     return api;
   }
 
-  const cookieJson = config.zaloCookieJson || fs.readFileSync(config.zaloCookiePath, "utf-8");
-  const cookie = JSON.parse(cookieJson);
+  const cookie = readCookiePayload(account);
 
   console.log(`${prefix}Logging in with cookie...`);
   return zalo.login({
@@ -321,6 +320,30 @@ function persistQrLoginInfo(account, loginInfo, prefix) {
     console.log(`${prefix}Saved QR session cookies to ${cookiePath}`);
   } catch (error) {
     console.warn(`${prefix}Failed to save QR cookies`, error?.message || error);
+  }
+}
+
+function readCookiePayload(account) {
+  const config = account?.config || {};
+  const prefix = account?.label ? `[${account.label}] ` : "";
+  const inline = typeof config.zaloCookieJson === "string" ? config.zaloCookieJson.trim() : "";
+
+  let raw = inline;
+  let sourceLabel = "ZALO_COOKIE_JSON";
+  if (!raw) {
+    if (!config.zaloCookiePath) {
+      throw new Error(`${prefix}Missing cookie JSON (set ZALO_COOKIE_JSON or ZALO_COOKIE_PATH)`);
+    }
+    sourceLabel = config.zaloCookiePath;
+    raw = fs.readFileSync(config.zaloCookiePath, "utf-8");
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    throw new Error(
+      `${prefix}Invalid cookie JSON from ${sourceLabel}: ${error?.message || error}`
+    );
   }
 }
 
@@ -1058,6 +1081,18 @@ function validateConfig(baseConfig, accounts) {
     if (config.zaloLoginMode === "cookie") {
       if (!config.zaloImei) missing.push("ZALO_IMEI");
       if (!config.zaloUserAgent) missing.push("ZALO_USER_AGENT");
+
+      const inlineCookie = typeof config.zaloCookieJson === "string" ? config.zaloCookieJson.trim() : "";
+      if (!inlineCookie) {
+        if (!config.zaloCookiePath) {
+          missing.push("ZALO_COOKIE_PATH");
+        } else if (!fs.existsSync(config.zaloCookiePath)) {
+          throw new Error(
+            "[" + account.label + "] Cookie file not found at " + config.zaloCookiePath +
+              ". Provide ZALO_COOKIE_JSON or ensure the file exists."
+          );
+        }
+      }
     }
     if (!config.chatwootWebhookPath) missing.push("CHATWOOT_WEBHOOK_PATH");
 
