@@ -106,3 +106,9 @@ in `.env`, while each account overrides only what differs.
 - Agent typing events trigger Zalo typing indicators (best effort).
 - Incoming Zalo attachment/link payloads are summarized into text and, when a URL is available, downloaded and uploaded to Chatwoot as attachments (best effort).
 - Outgoing Chatwoot messages with attachments are downloaded and sent as file paths when possible.
+
+## Design notes
+- The adapter uses a Chatwoot API inbox (Channel::Api) so we can integrate Zalo without touching Chatwoot UI, auth, or core business logic.
+- Zalo accounts are configured via environment variables or `accounts.json`, keeping account setup outside Chatwoot settings as required.
+- Group chats map to a single Chatwoot contact (group name or fallback) because API inbox conversations are contact-based.
+- If the API inbox has identity validation enabled, set `CHATWOOT_HMAC_TOKEN` to the inbox HMAC token.
