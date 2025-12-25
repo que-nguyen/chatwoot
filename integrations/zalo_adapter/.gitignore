@@ -1,4 +1,7 @@
-cookie.json
+cookie*.json
+accounts.json
+accounts.*.json
+!accounts.sample.json
 .env
 .env.*
 !.env.example
