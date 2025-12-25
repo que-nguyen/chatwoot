@@ -146,16 +146,15 @@ function resolveWebhookPath(basePath, rawPath, index, total) {
 function resolveCookiePath(basePath, rawPath, index, total) {
   const resolved = rawPath || basePath || "./cookie.json";
   if (total <= 1 || rawPath) return resolved;
-  if (basePath && basePath !== "./cookie.json") return resolved;
   return appendSuffixToPath(resolved, index + 1);
 }
 
 function resolveQrPath(basePath, rawPath, merged, index, total) {
-  const resolved = rawPath || basePath || "";
-  if (resolved) return resolved;
-  if (merged.zaloLoginMode !== "qr") return "";
-  if (total > 1) return appendSuffixToPath(DEFAULT_QR_PATH, index + 1);
-  return DEFAULT_QR_PATH;
+  if (rawPath) return rawPath;
+  if (merged.zaloLoginMode !== "qr") return basePath || "";
+  const resolved = basePath || DEFAULT_QR_PATH;
+  if (total > 1) return appendSuffixToPath(resolved, index + 1);
+  return resolved;
 }
 
 function appendSuffixToPath(filePath, suffix) {
