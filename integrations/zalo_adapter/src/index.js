@@ -461,7 +461,7 @@ async function handleChatwootWebhook(account, payload) {
   if (!payload || !payload.event) return;
 
   if (payload.event === "message_created") {
-    if (payload.private) return;
+    if (isChatwootPrivate(payload)) return;
     if (payload.message_type !== "outgoing") return;
 
     const sourceId = payload?.conversation?.contact_inbox?.source_id;
@@ -487,8 +487,13 @@ async function handleChatwootWebhook(account, payload) {
   }
 }
 
+
+function isChatwootPrivate(payload) {
+  return payload?.private === true || payload?.is_private === true;
+}
+
 async function handleChatwootTyping(account, payload) {
-  if (payload?.is_private) return;
+  if (isChatwootPrivate(payload)) return;
 
   const sourceId = payload?.conversation?.contact_inbox?.source_id;
   if (!sourceId) {
