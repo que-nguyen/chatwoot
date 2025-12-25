@@ -78,6 +78,7 @@ Publish help articles, FAQs, and guides through the built-in Help Center Portal.
 - Shopify Integration to view and manage customer orders right within Chatwoot.
 - Use Google Translate to translate messages from your customers in realtime.
 - Create and manage Linear tickets within Chatwoot.
+- Zalo Channel Adapter (via zca-js) for API inboxes (see `integrations/zalo_adapter/README.md`).
 
 #### Reports & Insights
 - Live View of ongoing conversations for real-time monitoring.
