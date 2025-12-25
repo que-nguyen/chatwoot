@@ -1,4 +1,4 @@
-import { Zalo, ThreadType } from "zca-js";
+import { Zalo, ThreadType, LoginQRCallbackEventType } from "zca-js";
 import crypto from "crypto";
 import fs from "fs";
 import http from "http";
@@ -7,6 +7,7 @@ import os from "os";
 import path from "path";
 
 const DEFAULT_WEBHOOK_PATH = "/webhooks/chatwoot";
+const DEFAULT_QR_PATH = "./qr.png";
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "chatwoot-zalo-"));
 const imageSize = typeof imageSizeModule === "function" ? imageSizeModule : imageSizeModule.imageSize;
 
@@ -117,6 +118,13 @@ function mergeAccountConfig(baseConfig, raw, index, total) {
     total
   );
   merged.zaloLoginMode = normalizeLoginMode(merged.zaloLoginMode);
+  merged.zaloCookiePath = resolveCookiePath(
+    base.zaloCookiePath,
+    raw?.zaloCookiePath,
+    index,
+    total
+  );
+  merged.zaloQrPath = resolveQrPath(base.zaloQrPath, raw?.zaloQrPath, merged, index, total);
   return merged;
 }
 
@@ -133,6 +141,30 @@ function resolveWebhookPath(basePath, rawPath, index, total) {
     return normalizePath(`${normalizedBase}/${index + 1}`);
   }
   return normalizedBase;
+}
+
+function resolveCookiePath(basePath, rawPath, index, total) {
+  const resolved = rawPath || basePath || "./cookie.json";
+  if (total <= 1 || rawPath) return resolved;
+  if (basePath && basePath !== "./cookie.json") return resolved;
+  return appendSuffixToPath(resolved, index + 1);
+}
+
+function resolveQrPath(basePath, rawPath, merged, index, total) {
+  const resolved = rawPath || basePath || "";
+  if (resolved) return resolved;
+  if (merged.zaloLoginMode !== "qr") return "";
+  if (total > 1) return appendSuffixToPath(DEFAULT_QR_PATH, index + 1);
+  return DEFAULT_QR_PATH;
+}
+
+function appendSuffixToPath(filePath, suffix) {
+  if (!filePath) return filePath;
+  const parsed = path.parse(filePath);
+  const name = parsed.name || "file";
+  const ext = parsed.ext || "";
+  const dir = parsed.dir || ".";
+  return path.join(dir, `${name}-${suffix}${ext}`);
 }
 
 function normalizePath(value) {
@@ -194,7 +226,17 @@ async function loginZalo(zalo, account) {
 
   if (config.zaloLoginMode === "qr") {
     console.log(`${prefix}Logging in with QR...`);
-    return zalo.loginQR();
+    const options = {};
+    if (config.zaloUserAgent) options.userAgent = config.zaloUserAgent;
+    if (config.zaloQrPath) options.qrPath = config.zaloQrPath;
+
+    const api = await zalo.loginQR(options, (event) => {
+      if (event.type === LoginQRCallbackEventType.GotLoginInfo) {
+        persistQrLoginInfo(account, event.data, prefix);
+      }
+    });
+
+    return api;
   }
 
   const cookieJson = config.zaloCookieJson || fs.readFileSync(config.zaloCookiePath, "utf-8");
@@ -206,6 +248,18 @@ async function loginZalo(zalo, account) {
     imei: config.zaloImei,
     userAgent: config.zaloUserAgent
   });
+}
+
+function persistQrLoginInfo(account, loginInfo, prefix) {
+  const cookiePath = account?.config?.zaloCookiePath;
+  if (!cookiePath) return;
+
+  try {
+    fs.writeFileSync(cookiePath, JSON.stringify(loginInfo.cookie, null, 2));
+    console.log(`${prefix}Saved QR session cookies to ${cookiePath}`);
+  } catch (error) {
+    console.warn(`${prefix}Failed to save QR cookies`, error?.message || error);
+  }
 }
 
 async function handleIncomingZaloMessage(account, message) {
@@ -893,6 +947,7 @@ function loadConfig() {
     zaloLoginMode: process.env.ZALO_LOGIN_MODE || "cookie",
     zaloCookiePath: process.env.ZALO_COOKIE_PATH || "./cookie.json",
     zaloCookieJson: process.env.ZALO_COOKIE_JSON || "",
+    zaloQrPath: process.env.ZALO_QR_PATH || "",
     zaloImei: process.env.ZALO_IMEI || "",
     zaloUserAgent: process.env.ZALO_USER_AGENT || "",
     zaloSelfListen: parseBool(process.env.ZALO_SELF_LISTEN, false),

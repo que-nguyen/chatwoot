@@ -29,6 +29,7 @@ Optional:
 - `ZALO_LOGIN_MODE` (`cookie` or `qr`, default: `cookie`)
 - `ZALO_COOKIE_PATH` (default: `./cookie.json`)
 - `ZALO_COOKIE_JSON` (inline JSON string for cookies; overrides `ZALO_COOKIE_PATH`)
+- `ZALO_QR_PATH` (path to write QR image in `qr` mode, default: `./qr.png`)
 - `ZALO_SELF_LISTEN` (`true` or `false`, default: `false`)
 - `ZALO_CHECK_UPDATE` (`true` or `false`, default: `true`)
 - `ZALO_LOGGING` (`true` or `false`, default: `true`)
@@ -39,7 +40,7 @@ Multi-account (optional):
 
 Each account object can override any single-account setting using camelCase keys, for example:
 `chatwootBaseUrl`, `chatwootInboxIdentifier`, `chatwootWebhookPath`, `chatwootHmacToken`,
-`zaloLoginMode`, `zaloCookiePath`, `zaloCookieJson`, `zaloImei`, `zaloUserAgent`,
+`zaloLoginMode`, `zaloCookiePath`, `zaloCookieJson`, `zaloQrPath`, `zaloImei`, `zaloUserAgent`,
 `zaloSelfListen`, `zaloCheckUpdate`, `zaloLogging`, and optional `name`/`label` for logs.
 
 When multiple accounts are configured and no per-account webhook path is provided,
@@ -56,6 +57,7 @@ CHATWOOT_HMAC_TOKEN=
 ZALO_LOGIN_MODE=cookie
 ZALO_COOKIE_PATH=./cookie.json
 ZALO_COOKIE_JSON=
+ZALO_QR_PATH=./qr.png
 ZALO_IMEI=your_imei
 ZALO_USER_AGENT=your_user_agent
 ZALO_SELF_LISTEN=false
@@ -84,6 +86,8 @@ ZALO_ACCOUNTS_PATH=./accounts.json
     "chatwootInboxIdentifier": "your_inbox_identifier_2",
     "chatwootWebhookPath": "/webhooks/chatwoot/support",
     "zaloLoginMode": "qr",
+    "zaloQrPath": "./qr-support.png",
+    "zaloCookiePath": "./cookie-support.json",
     "zaloSelfListen": false,
     "zaloCheckUpdate": true,
     "zaloLogging": true
@@ -102,6 +106,8 @@ in `.env`, while each account overrides only what differs.
   - `zalo:u:<threadId>` for user chats
   - `zalo:g:<threadId>` for group chats
 - Webhooks with missing or non-Zalo `source_id` values are ignored.
+- QR logins persist cookies to `ZALO_COOKIE_PATH` (so you can switch to cookie mode later).
+- When multiple accounts are configured and no per-account cookie/QR paths are provided, the adapter auto-suffixes them (e.g. `cookie-1.json`, `qr-2.png`).
 - Reaction/undo events are forwarded as informational incoming messages (Chatwoot API inbox does not support editing or deleting messages).
 - Zalo typing events update Chatwoot contact typing indicators (best effort).
 - Zalo seen events update Chatwoot contact last-seen/read status (best effort).

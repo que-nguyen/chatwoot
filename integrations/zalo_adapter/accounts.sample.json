@@ -13,6 +13,8 @@
     "chatwootInboxIdentifier": "your_inbox_identifier_2",
     "chatwootWebhookPath": "/webhooks/chatwoot/support",
     "zaloLoginMode": "qr",
+    "zaloQrPath": "./qr-support.png",
+    "zaloCookiePath": "./cookie-support.json",
     "zaloSelfListen": false,
     "zaloCheckUpdate": true,
     "zaloLogging": true
