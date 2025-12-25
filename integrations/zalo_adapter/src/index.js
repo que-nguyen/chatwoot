@@ -227,7 +227,13 @@ async function loginZalo(zalo, account) {
     console.log(`${prefix}Logging in with QR...`);
     const options = {};
     if (config.zaloUserAgent) options.userAgent = config.zaloUserAgent;
-    if (config.zaloQrPath) options.qrPath = config.zaloQrPath;
+    if (config.zaloQrPath) {
+      ensureDirectoryForFile(config.zaloQrPath, `${prefix}QR path`);
+      options.qrPath = config.zaloQrPath;
+    }
+    if (config.zaloCookiePath) {
+      ensureDirectoryForFile(config.zaloCookiePath, `${prefix}Cookie path`);
+    }
 
     const api = await zalo.loginQR(options, (event) => {
       if (event.type === LoginQRCallbackEventType.GotLoginInfo) {
@@ -254,6 +260,7 @@ function persistQrLoginInfo(account, loginInfo, prefix) {
   if (!cookiePath) return;
 
   try {
+    ensureDirectoryForFile(cookiePath, `${prefix}Cookie path`);
     fs.writeFileSync(cookiePath, JSON.stringify(loginInfo.cookie, null, 2));
     console.log(`${prefix}Saved QR session cookies to ${cookiePath}`);
   } catch (error) {
@@ -996,6 +1003,17 @@ function validateConfig(baseConfig, accounts) {
 function parseBool(value, defaultValue) {
   if (value === undefined || value === "") return defaultValue;
   return ["1", "true", "yes", "y"].includes(String(value).toLowerCase());
+}
+
+function ensureDirectoryForFile(filePath, label) {
+  if (!filePath) return;
+  const dir = path.dirname(filePath);
+  if (!dir || dir === ".") return;
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch (error) {
+    console.warn(`Failed to create directory for ${label}: ${dir}`, error?.message || error);
+  }
 }
 
 class ChatwootClient {
