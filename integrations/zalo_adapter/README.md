@@ -103,6 +103,8 @@ in `.env`, while each account overrides only what differs.
   - `zalo:g:<threadId>` for group chats
 - Webhooks with missing or non-Zalo `source_id` values are ignored.
 - Reaction/undo events are forwarded as informational incoming messages (Chatwoot API inbox does not support editing or deleting messages).
+- Zalo typing events update Chatwoot contact typing indicators (best effort).
+- Zalo seen events update Chatwoot contact last-seen/read status (best effort).
 - Agent typing events trigger Zalo typing indicators (best effort).
 - Incoming Zalo attachment/link payloads are summarized into text and, when a URL is available, downloaded and uploaded to Chatwoot as attachments (best effort).
 - Outgoing Chatwoot messages with attachments are downloaded and sent as file paths when possible.

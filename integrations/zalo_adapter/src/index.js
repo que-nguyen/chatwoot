@@ -42,6 +42,8 @@ async function startAccount(account) {
   account.api.listener.on("reaction", (reaction) => handleIncomingZaloReaction(account, reaction));
   account.api.listener.on("undo", (undo) => handleIncomingZaloUndo(account, undo));
   account.api.listener.on("group_event", (event) => handleIncomingZaloGroupEvent(account, event));
+  account.api.listener.on("typing", (typing) => handleIncomingZaloTyping(account, typing));
+  account.api.listener.on("seen_messages", (messages) => handleIncomingZaloSeen(account, messages));
   account.api.listener.start();
 }
 
@@ -298,6 +300,68 @@ async function handleIncomingZaloGroupEvent(account, event) {
   });
 }
 
+async function handleIncomingZaloTyping(account, typing) {
+  if (!typing || typing.isSelf) return;
+
+  const thread = buildThreadRefFromTyping(typing);
+  if (!thread) return;
+
+  const sourceId = buildSourceId(thread);
+  try {
+    const contactName = await resolveContactName(account, { thread });
+    await account.chatwoot.ensureContact({
+      sourceId,
+      name: contactName || "Zalo User",
+      identifier: sourceId
+    });
+
+    const conversationId = await account.chatwoot.findOpenConversation(sourceId);
+    if (!conversationId) return;
+
+    await account.chatwoot.toggleTyping({
+      sourceId,
+      conversationId,
+      status: "on"
+    });
+  } catch (error) {
+    console.warn("Failed to sync typing event", error?.message || error);
+  }
+}
+
+async function handleIncomingZaloSeen(account, messages) {
+  if (!Array.isArray(messages) || messages.length === 0) return;
+
+  const threads = new Map();
+  messages.forEach((message) => {
+    if (!message || message.isSelf) return;
+    if (!message.threadId) return;
+    const type = message.type === ThreadType.Group ? ThreadType.Group : ThreadType.User;
+    const key = `${type}:${message.threadId}`;
+    if (!threads.has(key)) {
+      threads.set(key, { id: message.threadId, type });
+    }
+  });
+
+  for (const thread of threads.values()) {
+    const sourceId = buildSourceId(thread);
+    try {
+      const contactName = await resolveContactName(account, { thread });
+      await account.chatwoot.ensureContact({
+        sourceId,
+        name: contactName || "Zalo User",
+        identifier: sourceId
+      });
+
+      const conversationId = await account.chatwoot.findOpenConversation(sourceId);
+      if (!conversationId) continue;
+
+      await account.chatwoot.updateLastSeen({ sourceId, conversationId });
+    } catch (error) {
+      console.warn("Failed to sync seen event", error?.message || error);
+    }
+  }
+}
+
 async function handleChatwootWebhook(account, payload) {
   if (!payload || !payload.event) return;
 
@@ -387,6 +451,12 @@ function buildThreadRefFromEvent(event) {
     id: event.threadId,
     type: event.isGroup ? ThreadType.Group : ThreadType.User
   };
+}
+
+function buildThreadRefFromTyping(typing) {
+  if (!typing || !typing.threadId) return null;
+  const type = typing.type === ThreadType.Group ? ThreadType.Group : ThreadType.User;
+  return { id: typing.threadId, type };
 }
 
 function buildSourceId(thread) {
@@ -899,9 +969,8 @@ class ChatwootClient {
   }
 
   async getOrCreateConversation(sourceId, customAttributes) {
-    const list = await this.requestJson(this.conversationsUrl(sourceId));
-    const open = Array.isArray(list) ? list.find((conv) => conv.status !== "resolved") : null;
-    if (open) return open.id;
+    const openId = await this.findOpenConversation(sourceId);
+    if (openId) return openId;
 
     const payload = { custom_attributes: customAttributes || {} };
     const created = await this.requestJson(this.conversationsUrl(sourceId), {
@@ -909,6 +978,12 @@ class ChatwootClient {
       body: payload
     });
     return created.id;
+  }
+
+  async findOpenConversation(sourceId) {
+    const list = await this.requestJson(this.conversationsUrl(sourceId));
+    const open = Array.isArray(list) ? list.find((conv) => conv.status !== "resolved") : null;
+    return open ? open.id : null;
   }
 
   async createIncomingMessage({ sourceId, conversationId, content, echoId, attachments = [] }) {
@@ -930,6 +1005,19 @@ class ChatwootClient {
     });
   }
 
+  async toggleTyping({ sourceId, conversationId, status }) {
+    return this.requestJson(this.typingUrl(sourceId, conversationId), {
+      method: "POST",
+      body: { typing_status: status }
+    });
+  }
+
+  async updateLastSeen({ sourceId, conversationId }) {
+    return this.requestJson(this.lastSeenUrl(sourceId, conversationId), {
+      method: "POST"
+    });
+  }
+
   contactUrl() {
     return `${this.baseUrl}/public/api/v1/inboxes/${this.inboxId}/contacts`;
   }
@@ -940,6 +1028,14 @@ class ChatwootClient {
 
   messagesUrl(sourceId, conversationId) {
     return `${this.baseUrl}/public/api/v1/inboxes/${this.inboxId}/contacts/${encodeURIComponent(sourceId)}/conversations/${conversationId}/messages`;
+  }
+
+  typingUrl(sourceId, conversationId) {
+    return `${this.baseUrl}/public/api/v1/inboxes/${this.inboxId}/contacts/${encodeURIComponent(sourceId)}/conversations/${conversationId}/toggle_typing`;
+  }
+
+  lastSeenUrl(sourceId, conversationId) {
+    return `${this.baseUrl}/public/api/v1/inboxes/${this.inboxId}/contacts/${encodeURIComponent(sourceId)}/conversations/${conversationId}/update_last_seen`;
   }
 
   hmacIdentifier(identifier) {
