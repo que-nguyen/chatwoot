@@ -187,25 +187,56 @@ async function handleIncomingZaloGroupEvent(event) {
 }
 
 async function handleChatwootWebhook(payload) {
-  if (!payload || payload.event !== "message_created") return;
-  if (payload.private) return;
-  if (payload.message_type !== "outgoing") return;
+  if (!payload || !payload.event) return;
+
+  if (payload.event === "message_created") {
+    if (payload.private) return;
+    if (payload.message_type !== "outgoing") return;
+
+    const sourceId = payload?.conversation?.contact_inbox?.source_id;
+    if (!sourceId) {
+      console.warn("Skipping webhook without source_id");
+      return;
+    }
+    const thread = parseSourceId(sourceId);
+    if (!thread) {
+      console.warn("Skipping webhook with unsupported source_id", { sourceId });
+      return;
+    }
+
+    const content = typeof payload.content === "string" ? payload.content : "";
+    const attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
+
+    await sendZaloMessage({ thread, content, attachments });
+    return;
+  }
+
+  if (payload.event === "conversation_typing_on") {
+    await handleChatwootTyping(payload);
+  }
+}
+
+async function handleChatwootTyping(payload) {
+  if (payload?.is_private) return;
 
   const sourceId = payload?.conversation?.contact_inbox?.source_id;
   if (!sourceId) {
-    console.warn("Skipping webhook without source_id");
+    console.warn("Skipping typing webhook without source_id");
     return;
   }
   const thread = parseSourceId(sourceId);
   if (!thread) {
-    console.warn("Skipping webhook with unsupported source_id", { sourceId });
+    console.warn("Skipping typing webhook with unsupported source_id", { sourceId });
     return;
   }
 
-  const content = typeof payload.content === "string" ? payload.content : "";
-  const attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
+  if (!api || typeof api.sendTypingEvent !== "function") return;
 
-  await sendZaloMessage({ thread, content, attachments });
+  try {
+    await api.sendTypingEvent(thread.id, thread.type);
+  } catch (error) {
+    console.warn("Failed to send typing event", error?.message || error);
+  }
 }
 
 async function sendZaloMessage({ thread, content, attachments }) {
