@@ -536,6 +536,9 @@ function parseSourceId(sourceId) {
 
 async function normalizeIncomingPayload(message, thread) {
   const content = normalizeIncomingContent(message);
+  if (!shouldDownloadIncomingAttachments(message)) {
+    return { content: prefixGroupSender(thread, message, content), attachments: [] };
+  }
   const attachmentTargets = extractIncomingAttachmentTargets(message);
   if (attachmentTargets.length === 0) {
     return { content: prefixGroupSender(thread, message, content), attachments: [] };
@@ -560,6 +563,19 @@ function normalizeIncomingContent(message) {
   if (!base) return quote;
   return `${quote}
 ${base}`;
+}
+
+function shouldDownloadIncomingAttachments(message) {
+  const msgType = typeof message?.data?.msgType === "string" ? message.data.msgType.toLowerCase() : "";
+  if (!msgType) return true;
+  const nonAttachmentTypes = new Set([
+    "webchat",
+    "chat.link",
+    "chat.location.new",
+    "chat.todo",
+    "chat.recommended"
+  ]);
+  return !nonAttachmentTypes.has(msgType);
 }
 
 function buildQuoteSummary(message) {
