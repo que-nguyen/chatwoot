@@ -121,6 +121,11 @@ in `.env`, while each account overrides only what differs.
 - Incoming Zalo attachment/link payloads are summarized into text and, when a URL is available, downloaded and uploaded to Chatwoot as attachments (best effort).
 - Outgoing Chatwoot messages with attachments are downloaded and sent as file paths when possible.
 
+## Scope
+- This adapter focuses on the Chatwoot API inbox surface (messages, attachments, typing, seen, and informational reaction/undo events).
+- Administrative Zalo APIs (group management, friend requests, profile settings, etc.) are intentionally not exposed because we avoid Chatwoot UI/auth/core changes in this integration.
+- If you need deeper Zalo automation, run a separate service that calls `zca-js` directly or extend Chatwoot with new workflows.
+
 ## Design notes
 - The adapter uses a Chatwoot API inbox (Channel::Api) so we can integrate Zalo without touching Chatwoot UI, auth, or core business logic.
 - Zalo accounts are configured via environment variables or `accounts.json`, keeping account setup outside Chatwoot settings as required.
