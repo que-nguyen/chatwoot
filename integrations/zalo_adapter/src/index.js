@@ -6,39 +6,59 @@ import imageSizeModule from "image-size";
 import os from "os";
 import path from "path";
 
-const config = loadConfig();
-const chatwoot = new ChatwootClient(config);
+const DEFAULT_WEBHOOK_PATH = "/webhooks/chatwoot";
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "chatwoot-zalo-"));
 const imageSize = typeof imageSizeModule === "function" ? imageSizeModule : imageSizeModule.imageSize;
-let api;
-const groupNameCache = new Map();
-const groupNamePending = new Map();
-
-await start();
 
 async function start() {
-  validateConfig();
+  const baseConfig = loadConfig();
+  const accounts = buildAccounts(baseConfig);
+  validateConfig(baseConfig, accounts);
 
+  for (const account of accounts) {
+    await startAccount(account);
+  }
+
+  const server = createServer(accounts);
+  server.listen(baseConfig.port, () => {
+    const bindings = accounts
+      .map((account) => `${account.config.chatwootWebhookPath} => ${account.label}`)
+      .join(", ");
+    const suffix = accounts.length > 1 ? ` (${bindings})` : ` ${bindings}`;
+    console.log(`Zalo adapter listening on :${baseConfig.port}${suffix}`);
+  });
+}
+
+async function startAccount(account) {
   const zalo = new Zalo({
-    selfListen: config.zaloSelfListen,
-    checkUpdate: config.zaloCheckUpdate,
-    logging: config.zaloLogging,
+    selfListen: account.config.zaloSelfListen,
+    checkUpdate: account.config.zaloCheckUpdate,
+    logging: account.config.zaloLogging,
     imageMetadataGetter
   });
 
-  api = await loginZalo(zalo);
-  api.listener.on("message", (message) => handleIncomingZaloMessage(message));
-  api.listener.on("reaction", (reaction) => handleIncomingZaloReaction(reaction));
-  api.listener.on("undo", (undo) => handleIncomingZaloUndo(undo));
-  api.listener.on("group_event", (event) => handleIncomingZaloGroupEvent(event));
-  api.listener.start();
+  account.api = await loginZalo(zalo, account);
+  account.api.listener.on("message", (message) => handleIncomingZaloMessage(account, message));
+  account.api.listener.on("reaction", (reaction) => handleIncomingZaloReaction(account, reaction));
+  account.api.listener.on("undo", (undo) => handleIncomingZaloUndo(account, undo));
+  account.api.listener.on("group_event", (event) => handleIncomingZaloGroupEvent(account, event));
+  account.api.listener.start();
+}
 
-  const server = http.createServer(async (req, res) => {
+function createServer(accounts) {
+  const accountByPath = new Map();
+  accounts.forEach((account) => {
+    accountByPath.set(normalizePath(account.config.chatwootWebhookPath), account);
+  });
+
+  return http.createServer(async (req, res) => {
     const { pathname } = new URL(req.url, `http://${req.headers.host}`);
-    if (req.method === "POST" && pathname === config.chatwootWebhookPath) {
+    const account = accountByPath.get(normalizePath(pathname));
+
+    if (req.method === "POST" && account) {
       try {
         const payload = await readJson(req);
-        await handleChatwootWebhook(payload);
+        await handleChatwootWebhook(account, payload);
         res.writeHead(200, { "Content-Type": "text/plain" });
         res.end("ok");
       } catch (error) {
@@ -52,10 +72,99 @@ async function start() {
     res.writeHead(404, { "Content-Type": "text/plain" });
     res.end("not found");
   });
+}
 
-  server.listen(config.port, () => {
-    console.log(`Zalo adapter listening on :${config.port}${config.chatwootWebhookPath}`);
+function buildAccounts(baseConfig) {
+  const rawAccounts = loadAccountsFromEnv(baseConfig);
+  const items = rawAccounts.length > 0 ? rawAccounts : [{}];
+  const total = items.length;
+
+  return items.map((raw, index) => {
+    const config = mergeAccountConfig(baseConfig, raw, index, total);
+    const label = resolveAccountLabel(raw, index, config);
+    return {
+      id: raw?.id || raw?.name || `account-${index + 1}`,
+      label,
+      config,
+      chatwoot: new ChatwootClient(config),
+      api: null,
+      groupNameCache: new Map(),
+      groupNamePending: new Map()
+    };
   });
+}
+
+function resolveAccountLabel(raw, index, config) {
+  return (
+    raw?.label ||
+    raw?.name ||
+    raw?.id ||
+    config.chatwootInboxIdentifier ||
+    `account-${index + 1}`
+  );
+}
+
+function mergeAccountConfig(baseConfig, raw, index, total) {
+  const { zaloAccountsJson, zaloAccountsPath, ...base } = baseConfig;
+  const merged = { ...base, ...raw };
+  merged.chatwootBaseUrl = normalizeBaseUrl(merged.chatwootBaseUrl);
+  merged.chatwootWebhookPath = resolveWebhookPath(
+    base.chatwootWebhookPath,
+    raw?.chatwootWebhookPath,
+    index,
+    total
+  );
+  merged.zaloLoginMode = normalizeLoginMode(merged.zaloLoginMode);
+  return merged;
+}
+
+function normalizeLoginMode(value) {
+  if (!value) return "cookie";
+  const normalized = String(value).toLowerCase();
+  return normalized === "qr" ? "qr" : "cookie";
+}
+
+function resolveWebhookPath(basePath, rawPath, index, total) {
+  if (rawPath) return normalizePath(rawPath);
+  const normalizedBase = normalizePath(basePath || DEFAULT_WEBHOOK_PATH) || DEFAULT_WEBHOOK_PATH;
+  if (total > 1) {
+    return normalizePath(`${normalizedBase}/${index + 1}`);
+  }
+  return normalizedBase;
+}
+
+function normalizePath(value) {
+  if (!value) return "";
+  let normalized = value.trim();
+  if (!normalized.startsWith("/")) {
+    normalized = `/${normalized}`;
+  }
+  if (normalized.length > 1 && normalized.endsWith("/")) {
+    normalized = normalized.slice(0, -1);
+  }
+  return normalized;
+}
+
+function normalizeBaseUrl(value) {
+  return (value || "").replace(/\/+$/, "");
+}
+
+function loadAccountsFromEnv(baseConfig) {
+  const jsonValue = baseConfig.zaloAccountsJson || "";
+  const pathValue = baseConfig.zaloAccountsPath || "";
+  if (!jsonValue && !pathValue) return [];
+
+  let raw = jsonValue;
+  if (!raw) {
+    raw = fs.readFileSync(pathValue, "utf-8");
+  }
+
+  const parsed = JSON.parse(raw);
+  if (!Array.isArray(parsed)) {
+    throw new Error("ZALO_ACCOUNTS_JSON/PATH must be a JSON array");
+  }
+
+  return parsed;
 }
 
 async function imageMetadataGetter(filePath) {
@@ -77,16 +186,19 @@ async function imageMetadataGetter(filePath) {
   }
 }
 
-async function loginZalo(zalo) {
+async function loginZalo(zalo, account) {
+  const config = account.config;
+  const prefix = account?.label ? `[${account.label}] ` : "";
+
   if (config.zaloLoginMode === "qr") {
-    console.log("Logging in with QR...");
+    console.log(`${prefix}Logging in with QR...`);
     return zalo.loginQR();
   }
 
   const cookieJson = config.zaloCookieJson || fs.readFileSync(config.zaloCookiePath, "utf-8");
   const cookie = JSON.parse(cookieJson);
 
-  console.log("Logging in with cookie...");
+  console.log(`${prefix}Logging in with cookie...`);
   return zalo.login({
     cookie,
     imei: config.zaloImei,
@@ -94,19 +206,19 @@ async function loginZalo(zalo) {
   });
 }
 
-async function handleIncomingZaloMessage(message) {
+async function handleIncomingZaloMessage(account, message) {
   if (!message || message.isSelf) return;
 
   const thread = buildThreadRef(message);
   const sourceId = buildSourceId(thread);
   const { content, attachments } = await normalizeIncomingPayload(message, thread);
   const echoId = message?.data?.msgId || message?.data?.cliMsgId;
-  const contactName = await resolveContactName({
+  const contactName = await resolveContactName(account, {
     thread,
     senderName: message?.data?.dName
   });
 
-  await syncIncomingToChatwoot({
+  await syncIncomingToChatwoot(account, {
     sourceId,
     thread,
     content: content || "",
@@ -116,7 +228,7 @@ async function handleIncomingZaloMessage(message) {
   });
 }
 
-async function handleIncomingZaloReaction(reaction) {
+async function handleIncomingZaloReaction(account, reaction) {
   if (!reaction || reaction.isSelf) return;
 
   const thread = buildThreadRefFromEvent(reaction);
@@ -125,12 +237,12 @@ async function handleIncomingZaloReaction(reaction) {
   const sourceId = buildSourceId(thread);
   const content = formatReactionContent(reaction, thread);
   const echoId = buildEventEchoId("reaction", reaction?.data);
-  const contactName = await resolveContactName({
+  const contactName = await resolveContactName(account, {
     thread,
     senderName: reaction?.data?.dName
   });
 
-  await syncIncomingToChatwoot({
+  await syncIncomingToChatwoot(account, {
     sourceId,
     thread,
     content,
@@ -139,7 +251,7 @@ async function handleIncomingZaloReaction(reaction) {
   });
 }
 
-async function handleIncomingZaloUndo(undo) {
+async function handleIncomingZaloUndo(account, undo) {
   if (!undo || undo.isSelf) return;
 
   const thread = buildThreadRefFromEvent(undo);
@@ -148,12 +260,12 @@ async function handleIncomingZaloUndo(undo) {
   const sourceId = buildSourceId(thread);
   const content = formatUndoContent(undo, thread);
   const echoId = buildEventEchoId("undo", undo?.data);
-  const contactName = await resolveContactName({
+  const contactName = await resolveContactName(account, {
     thread,
     senderName: undo?.data?.dName
   });
 
-  await syncIncomingToChatwoot({
+  await syncIncomingToChatwoot(account, {
     sourceId,
     thread,
     content,
@@ -162,7 +274,7 @@ async function handleIncomingZaloUndo(undo) {
   });
 }
 
-async function handleIncomingZaloGroupEvent(event) {
+async function handleIncomingZaloGroupEvent(account, event) {
   if (!event || event.isSelf) return;
   if (!event.threadId) return;
 
@@ -170,14 +282,14 @@ async function handleIncomingZaloGroupEvent(event) {
   const sourceId = buildSourceId(thread);
   const content = formatGroupEventContent(event, thread);
   const echoId = buildGroupEventEchoId(event);
-  const contactName = await resolveContactName({
+  const contactName = await resolveContactName(account, {
     thread,
     groupName: event?.data?.groupName
   });
 
   if (!content) return;
 
-  await syncIncomingToChatwoot({
+  await syncIncomingToChatwoot(account, {
     sourceId,
     thread,
     content,
@@ -186,7 +298,7 @@ async function handleIncomingZaloGroupEvent(event) {
   });
 }
 
-async function handleChatwootWebhook(payload) {
+async function handleChatwootWebhook(account, payload) {
   if (!payload || !payload.event) return;
 
   if (payload.event === "message_created") {
@@ -207,16 +319,16 @@ async function handleChatwootWebhook(payload) {
     const content = typeof payload.content === "string" ? payload.content : "";
     const attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
 
-    await sendZaloMessage({ thread, content, attachments });
+    await sendZaloMessage(account, { thread, content, attachments });
     return;
   }
 
   if (payload.event === "conversation_typing_on") {
-    await handleChatwootTyping(payload);
+    await handleChatwootTyping(account, payload);
   }
 }
 
-async function handleChatwootTyping(payload) {
+async function handleChatwootTyping(account, payload) {
   if (payload?.is_private) return;
 
   const sourceId = payload?.conversation?.contact_inbox?.source_id;
@@ -230,22 +342,22 @@ async function handleChatwootTyping(payload) {
     return;
   }
 
-  if (!api || typeof api.sendTypingEvent !== "function") return;
+  if (!account.api || typeof account.api.sendTypingEvent !== "function") return;
 
   try {
-    await api.sendTypingEvent(thread.id, thread.type);
+    await account.api.sendTypingEvent(thread.id, thread.type);
   } catch (error) {
     console.warn("Failed to send typing event", error?.message || error);
   }
 }
 
-async function sendZaloMessage({ thread, content, attachments }) {
-  if (!api) throw new Error("Zalo API not initialized");
+async function sendZaloMessage(account, { thread, content, attachments }) {
+  if (!account.api) throw new Error("Zalo API not initialized");
 
   const files = await downloadAttachments(attachments);
   try {
     if (files.length > 0) {
-      await api.sendMessage(
+      await account.api.sendMessage(
         {
           msg: content || "",
           attachments: files
@@ -258,7 +370,7 @@ async function sendZaloMessage({ thread, content, attachments }) {
 
     if (!content) return;
 
-    await api.sendMessage(content, thread.id, thread.type);
+    await account.api.sendMessage(content, thread.id, thread.type);
   } finally {
     cleanupFiles(files);
   }
@@ -422,50 +534,50 @@ function buildGroupEventEchoId(event) {
   return parts.map((part) => String(part).replace(/\s+/g, "_")).join(":");
 }
 
-async function resolveContactName({ thread, senderName, groupName }) {
+async function resolveContactName(account, { thread, senderName, groupName }) {
   if (!thread) return senderName || "Zalo User";
   if (thread.type !== ThreadType.Group) return senderName || "Zalo User";
 
   if (groupName) {
-    groupNameCache.set(thread.id, groupName);
+    account.groupNameCache.set(thread.id, groupName);
     return groupName;
   }
 
-  const cached = groupNameCache.get(thread.id);
+  const cached = account.groupNameCache.get(thread.id);
   if (cached) return cached;
 
-  const fetched = await resolveGroupName(thread.id);
+  const fetched = await resolveGroupName(account, thread.id);
   if (fetched) return fetched;
 
   return `Zalo Group ${thread.id}`;
 }
 
-async function resolveGroupName(threadId) {
+async function resolveGroupName(account, threadId) {
   if (!threadId) return null;
 
-  const cached = groupNameCache.get(threadId);
+  const cached = account.groupNameCache.get(threadId);
   if (cached) return cached;
 
-  const pending = groupNamePending.get(threadId);
+  const pending = account.groupNamePending.get(threadId);
   if (pending) return pending;
 
   const task = (async () => {
-    if (!api || typeof api.getGroupInfo !== "function") return null;
+    if (!account.api || typeof account.api.getGroupInfo !== "function") return null;
     try {
-      const response = await api.getGroupInfo(threadId);
+      const response = await account.api.getGroupInfo(threadId);
       const info = response?.gridInfoMap?.[threadId];
       const name = info?.name || info?.groupName;
-      if (name) groupNameCache.set(threadId, name);
+      if (name) account.groupNameCache.set(threadId, name);
       return name || null;
     } catch (error) {
       console.warn("Failed to fetch Zalo group info", threadId, error?.message || error);
       return null;
     } finally {
-      groupNamePending.delete(threadId);
+      account.groupNamePending.delete(threadId);
     }
   })();
 
-  groupNamePending.set(threadId, task);
+  account.groupNamePending.set(threadId, task);
   return task;
 }
 
@@ -476,22 +588,18 @@ function prefixGroupSenderId(thread, senderId, text) {
   return text;
 }
 
-async function syncIncomingToChatwoot({
-  sourceId,
-  thread,
-  content,
-  echoId,
-  attachments = [],
-  contactName
-}) {
+async function syncIncomingToChatwoot(
+  account,
+  { sourceId, thread, content, echoId, attachments = [], contactName }
+) {
   try {
-    await chatwoot.ensureContact({
+    await account.chatwoot.ensureContact({
       sourceId,
       name: contactName || "Zalo User",
       identifier: sourceId
     });
 
-    const conversationId = await chatwoot.getOrCreateConversation(sourceId, {
+    const conversationId = await account.chatwoot.getOrCreateConversation(sourceId, {
       zalo_thread_id: thread.id,
       zalo_thread_type: thread.type === ThreadType.Group ? "group" : "user"
     });
@@ -501,7 +609,7 @@ async function syncIncomingToChatwoot({
       return;
     }
 
-    await chatwoot.createIncomingMessage({
+    await account.chatwoot.createIncomingMessage({
       sourceId,
       conversationId,
       content: content || "",
@@ -710,7 +818,7 @@ function loadConfig() {
     port: parseInt(process.env.PORT || "3001", 10),
     chatwootBaseUrl: (process.env.CHATWOOT_BASE_URL || "").replace(/\/+$/, ""),
     chatwootInboxIdentifier: process.env.CHATWOOT_INBOX_IDENTIFIER || "",
-    chatwootWebhookPath: process.env.CHATWOOT_WEBHOOK_PATH || "/webhooks/chatwoot",
+    chatwootWebhookPath: process.env.CHATWOOT_WEBHOOK_PATH || DEFAULT_WEBHOOK_PATH,
     chatwootHmacToken: process.env.CHATWOOT_HMAC_TOKEN || "",
     zaloLoginMode: process.env.ZALO_LOGIN_MODE || "cookie",
     zaloCookiePath: process.env.ZALO_COOKIE_PATH || "./cookie.json",
@@ -719,21 +827,46 @@ function loadConfig() {
     zaloUserAgent: process.env.ZALO_USER_AGENT || "",
     zaloSelfListen: parseBool(process.env.ZALO_SELF_LISTEN, false),
     zaloCheckUpdate: parseBool(process.env.ZALO_CHECK_UPDATE, true),
-    zaloLogging: parseBool(process.env.ZALO_LOGGING, true)
+    zaloLogging: parseBool(process.env.ZALO_LOGGING, true),
+    zaloAccountsJson: process.env.ZALO_ACCOUNTS_JSON || "",
+    zaloAccountsPath: process.env.ZALO_ACCOUNTS_PATH || ""
   };
 }
 
-function validateConfig() {
-  const missing = [];
-  if (!config.chatwootBaseUrl) missing.push("CHATWOOT_BASE_URL");
-  if (!config.chatwootInboxIdentifier) missing.push("CHATWOOT_INBOX_IDENTIFIER");
-  if (config.zaloLoginMode === "cookie") {
-    if (!config.zaloImei) missing.push("ZALO_IMEI");
-    if (!config.zaloUserAgent) missing.push("ZALO_USER_AGENT");
+function validateConfig(baseConfig, accounts) {
+  if (!accounts.length) {
+    throw new Error("No Zalo accounts configured");
   }
-  if (missing.length > 0) {
-    throw new Error(`Missing required env vars: ${missing.join(", ")}`);
-  }
+
+  const pathMap = new Map();
+
+  accounts.forEach((account) => {
+    const missing = [];
+    const config = account.config;
+
+    if (!config.chatwootBaseUrl) missing.push("CHATWOOT_BASE_URL");
+    if (!config.chatwootInboxIdentifier) missing.push("CHATWOOT_INBOX_IDENTIFIER");
+    if (config.zaloLoginMode === "cookie") {
+      if (!config.zaloImei) missing.push("ZALO_IMEI");
+      if (!config.zaloUserAgent) missing.push("ZALO_USER_AGENT");
+    }
+    if (!config.chatwootWebhookPath) missing.push("CHATWOOT_WEBHOOK_PATH");
+
+    if (missing.length > 0) {
+      throw new Error(`[${account.label}] Missing required env vars: ${missing.join(", ")}`);
+    }
+
+    if (accounts.length > 1) {
+      const normalizedPath = normalizePath(config.chatwootWebhookPath);
+      const existing = pathMap.get(normalizedPath);
+      if (existing) {
+        throw new Error(
+          `Duplicate webhook path ${normalizedPath} for accounts ${existing} and ${account.label}`
+        );
+      }
+      pathMap.set(normalizedPath, account.label);
+    }
+  });
 }
 
 function parseBool(value, defaultValue) {
@@ -864,3 +997,5 @@ class ChatwootClient {
     return data;
   }
 }
+
+await start();

@@ -33,6 +33,18 @@ Optional:
 - `ZALO_CHECK_UPDATE` (`true` or `false`, default: `true`)
 - `ZALO_LOGGING` (`true` or `false`, default: `true`)
 
+Multi-account (optional):
+- `ZALO_ACCOUNTS_JSON` (JSON array of account objects)
+- `ZALO_ACCOUNTS_PATH` (path to a JSON file containing the same array)
+
+Each account object can override any single-account setting using camelCase keys, for example:
+`chatwootBaseUrl`, `chatwootInboxIdentifier`, `chatwootWebhookPath`, `chatwootHmacToken`,
+`zaloLoginMode`, `zaloCookiePath`, `zaloCookieJson`, `zaloImei`, `zaloUserAgent`,
+`zaloSelfListen`, `zaloCheckUpdate`, `zaloLogging`, and optional `name`/`label` for logs.
+
+When multiple accounts are configured and no per-account webhook path is provided,
+paths default to `/webhooks/chatwoot/<index>` (1-based).
+
 ## Notes
 - Messages are mapped to a Chatwoot API inbox using `source_id` values like:
   - `zalo:u:<threadId>` for user chats
