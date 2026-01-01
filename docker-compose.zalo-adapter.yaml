@@ -4,7 +4,7 @@ services:
     working_dir: /app/integrations/zalo_adapter
     command: ["sh", "-lc", "npm install --no-package-lock && npm start"]
     env_file:
-      - ./integrations/zalo_adapter/.env
+      - ${ZALO_ADAPTER_ENV_FILE:-./integrations/zalo_adapter/.env}
     environment:
       - PORT=3001
     volumes:

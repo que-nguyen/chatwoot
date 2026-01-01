@@ -3,6 +3,8 @@
 require 'agents'
 
 Rails.application.config.after_initialize do
+  next unless InstallationConfig.table_exists?
+
   api_key = InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_API_KEY')&.value
   model = InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_MODEL')&.value.presence || LlmConstants::DEFAULT_MODEL
   api_endpoint = InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')&.value || LlmConstants::OPENAI_API_ENDPOINT
@@ -18,6 +20,8 @@ Rails.application.config.after_initialize do
       config.debug = false
     end
   end
+rescue ActiveRecord::ConnectionNotEstablished, ActiveRecord::NoDatabaseError, ActiveRecord::StatementInvalid => e
+  Rails.logger.info "AI Agents SDK not configured yet: #{e.class}: #{e.message}"
 rescue StandardError => e
-  Rails.logger.error "Failed to configure AI Agents SDK: #{e.message}"
+  Rails.logger.error "Failed to configure AI Agents SDK: #{e.class}: #{e.message}"
 end

@@ -52,6 +52,10 @@ Tạo file env (không commit):
 cp integrations/zalo_adapter/.env.example integrations/zalo_adapter/.env
 ```
 
+Tuỳ chọn (tách staging/prod hoặc tránh đụng config khi chạy nhiều compose project): tạo file env khác và set `ZALO_ADAPTER_ENV_FILE` khi chạy overlay:
+- `cp integrations/zalo_adapter/.env.example integrations/zalo_adapter/.env.staging`
+- set trong `.env` (host-side) hoặc export: `ZALO_ADAPTER_ENV_FILE=./integrations/zalo_adapter/.env.staging`
+
 Các biến quan trọng (khi chạy adapter trong Docker cùng project Chatwoot):
 - `CHATWOOT_BASE_URL=http://rails:3000`
 - `CHATWOOT_INBOX_IDENTIFIER=<identifier>` (từ bước 1)
