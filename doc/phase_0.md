@@ -157,4 +157,6 @@ docker compose -f docker-compose.production.yaml exec -T rails \
 
 Khi thỏa các checkpoint ở mục (3) và kiểm tra persistence ở mục (4) đều PASS ⇒ **CÀI ĐẶT THÀNH CÔNG**.
 
+Nếu cần public access + TLS qua domain, xem thêm `doc/phase_2.md`.
+
 Refs: `/home/quenn/chatwoot-zcajs/doc/phase_0.md`
