@@ -103,6 +103,20 @@ Health check (host):
 - PASS nếu agent gửi 1 message trong API inbox và adapter log nhận webhook (trả `200`).
 - Nếu bật `ZALO_DRY_RUN=true`, adapter sẽ log và bỏ qua việc gửi sang Zalo (đúng mục đích smoke-test).
 
+#### 4.2.1 (Tuỳ chọn) Signed webhooks: `X-Chatwoot-Signature`
+- Khi đã set `CHATWOOT_HMAC_TOKEN`, PASS nếu adapter **không** log `Missing X-Chatwoot-Signature...` và không trả `401` do signature mismatch.
+- Nếu adapter vẫn log thiếu signature: khả năng bạn đang chạy Chatwoot image chưa có tính năng ký webhook (adapter sẽ fallback nhận webhook nhưng skip verify).
+
+Fix (dev/smoke-test): build Chatwoot image từ repo này và chạy với tag local:
+```sh
+docker build -t chatwoot/chatwoot:local -f docker/Dockerfile .
+CW_IMAGE_TAG=local docker compose -f docker-compose.production.yaml -f docker-compose.zalo-adapter.yaml up -d
+```
+
+Ghi chú:
+- Nếu bạn đang chạy thêm overlay khác (Phase 2 Caddy), include thêm file đó khi `up/pull/logs` để tránh orphan containers.
+- Nếu bạn đang override `CW_WEB_PORT/CW_POSTGRES_PORT/CW_REDIS_PORT`, hãy `export` hoặc set trong `.env` trước khi chạy lại `docker compose up -d` để tránh port conflict (xem `doc/phase_0.md`).
+
 ### 4.3 Zalo → Chatwoot (incoming)
 - PASS nếu có message mới trên Zalo và thấy conversation/message xuất hiện trong Chatwoot API inbox.
 
