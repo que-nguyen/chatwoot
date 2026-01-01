@@ -28,6 +28,9 @@ Trong `.env` (hoặc export khi chạy compose), set tối thiểu:
 - `FORCE_SSL=true`
 - `CADDY_DOMAIN=chatwoot.example.com`
 
+Ghi chú:
+- `CADDY_DOMAIN` nên là domain **không kèm scheme** (`https://`/`http://`). Nếu bạn set `http://...`, Caddy sẽ chạy **HTTP-only** và TLS trên port `443` sẽ không hoạt động (dù compose vẫn map port `443`).
+
 Tuỳ chọn (đổi port nếu xung đột):
 - `CW_CADDY_HTTP_PORT=8080`
 - `CW_CADDY_HTTPS_PORT=8443`
