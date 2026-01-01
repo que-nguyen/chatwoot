@@ -25,7 +25,7 @@ Required:
 
 Optional:
 - `PORT` (default: `3001`)
-- `CHATWOOT_WEBHOOK_PATH` (default: `/webhooks/chatwoot`)
+- `CHATWOOT_WEBHOOK_PATH` (default: `/webhooks/chatwoot`; recommended to include a secret suffix like `/webhooks/chatwoot/<secret>`)
 - `CHATWOOT_HMAC_TOKEN` (recommended; required when API inbox identity validation is enabled; also used to verify `X-Chatwoot-Signature` for Chatwoot → adapter webhooks when present)
 - `ZALO_LOGIN_MODE` (`cookie` or `qr`, default: `cookie`)
 - `ZALO_DRY_RUN` (`true` or `false`, default: `false`) - accept Chatwoot webhooks but skip Zalo login/send
@@ -58,7 +58,7 @@ are resolved relative to the accounts file directory.
 PORT=3001
 CHATWOOT_BASE_URL=http://localhost:3000
 CHATWOOT_INBOX_IDENTIFIER=your_api_inbox_identifier
-CHATWOOT_WEBHOOK_PATH=/webhooks/chatwoot
+CHATWOOT_WEBHOOK_PATH=/webhooks/chatwoot/replace_with_secret
 CHATWOOT_HMAC_TOKEN=
 
 ZALO_LOGIN_MODE=cookie

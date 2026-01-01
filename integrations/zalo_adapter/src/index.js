@@ -24,7 +24,7 @@ async function start() {
   const server = createServer(accounts);
   server.listen(baseConfig.port, () => {
     const bindings = accounts
-      .map((account) => `${account.config.chatwootWebhookPath} => ${account.label}`)
+      .map((account) => `${redactWebhookPathForLog(account.config.chatwootWebhookPath)} => ${account.label}`)
       .join(", ");
     const suffix = accounts.length > 1 ? ` (${bindings})` : ` ${bindings}`;
     console.log(`Zalo adapter listening on :${baseConfig.port}${suffix}`);
@@ -159,6 +159,19 @@ function buildAccounts(baseConfig) {
 
 function resolveAccountLabel(raw, index) {
   return raw?.label || raw?.name || raw?.id || `account-${index + 1}`;
+}
+
+function redactWebhookPathForLog(value) {
+  const normalized = normalizePath(value);
+  if (!normalized) return "";
+
+  const parts = normalized.split("/").filter(Boolean);
+  if (parts.length <= 2) return normalized;
+
+  const last = parts[parts.length - 1] || "";
+  if (/^\d+$/.test(last)) return normalized;
+
+  return `/${parts[0]}/${parts[1]}/<redacted>`;
 }
 
 function mergeAccountConfig(baseConfig, raw, index, total) {
@@ -1171,8 +1184,15 @@ function validateConfig(baseConfig, accounts) {
       throw new Error(`[${account.label}] Missing required env vars: ${missing.join(", ")}`);
     }
 
+    const normalizedPath = normalizePath(config.chatwootWebhookPath);
+    if (normalizedPath === DEFAULT_WEBHOOK_PATH) {
+      console.warn(
+        `[${account.label}] CHATWOOT_WEBHOOK_PATH uses the default '${DEFAULT_WEBHOOK_PATH}'. ` +
+          "For production, use an unguessable secret suffix like '/webhooks/chatwoot/<secret>'."
+      );
+    }
+
     if (accounts.length > 1) {
-      const normalizedPath = normalizePath(config.chatwootWebhookPath);
       const existing = pathMap.get(normalizedPath);
       if (existing) {
         throw new Error(
