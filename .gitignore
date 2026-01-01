@@ -64,6 +64,8 @@ package-lock.json
 
 *.dump
 
+/backup
+
 
 # cypress
 test/cypress/videos/*
