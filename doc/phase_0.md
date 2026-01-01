@@ -33,6 +33,9 @@ Ghi chú: nếu bạn set các biến này theo kiểu “one-shot” (đặt tr
 - export biến vào shell (ví dụ `export CW_WEB_PORT=3001`), hoặc
 - thay trực tiếp port trong URL (ví dụ `http://127.0.0.1:3001/`).
 
+Khuyến nghị (để tái lập được và tránh quên biến khi chạy overlay Phase 1/2/3/4):
+- đặt `CW_WEB_PORT/CW_POSTGRES_PORT/CW_REDIS_PORT` trực tiếp trong `.env` (file này không commit) để mọi lệnh `docker compose` đều dùng cùng giá trị.
+
 ### Disk/RAM
 - PASS nếu còn đủ dung lượng và RAM để chạy Postgres + Redis + Rails.
 - Lệnh kiểm tra nhanh:

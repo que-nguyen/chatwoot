@@ -17,6 +17,10 @@ Ghi chú:
 - Nếu máy đã có service chiếm port `80/443`, bạn phải dừng service đó hoặc đổi port mapping bằng `CW_CADDY_HTTP_PORT/CW_CADDY_HTTPS_PORT`.
 - Let's Encrypt HTTP-01/TLS-ALPN challenges thường yêu cầu port `80/443` đúng chuẩn.
 
+### Lưu ý về port override / overlay (tránh downtime ngoài ý muốn)
+- Nếu Phase 0 đang chạy với `CW_WEB_PORT/CW_POSTGRES_PORT/CW_REDIS_PORT` khác mặc định, hãy đảm bảo các biến này **vẫn được set** (export hoặc để trong `.env`) khi chạy lệnh ở Phase 2. Nếu thiếu, `docker compose up` có thể recreate container với port mặc định và fail do port conflict.
+- Nếu bạn đang chạy overlay Phase 1 (Zalo adapter), hãy include cả file đó khi `up/pull/logs` để tránh orphan containers.
+
 ## 1) Chuẩn bị `.env` (không commit)
 
 Trong `.env` (hoặc export khi chạy compose), set tối thiểu:
@@ -30,6 +34,16 @@ Tuỳ chọn (đổi port nếu xung đột):
 
 ## 2) Start stack với Caddy overlay
 
+Nếu đang chạy kèm Zalo adapter (Phase 1), dùng cả 3 file:
+```sh
+docker compose \
+  -f docker-compose.production.yaml \
+  -f docker-compose.zalo-adapter.yaml \
+  -f docker-compose.caddy.yaml \
+  up -d
+```
+
+Nếu không dùng adapter, chỉ cần production + caddy:
 ```sh
 docker compose \
   -f docker-compose.production.yaml \
