@@ -1,0 +1,11 @@
+[Unit]
+Description=Chatwoot Docker Compose backup (Postgres + storage)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/chatwoot/ops.env
+WorkingDirectory=/path/to/chatwoot
+ExecStart=/usr/bin/env bash script/ops/chatwoot_backup.sh
+

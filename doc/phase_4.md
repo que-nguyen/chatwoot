@@ -63,6 +63,38 @@ Thêm dòng (đổi path cho đúng repo):
 0 2 * * * cd /path/to/chatwoot && CW_BACKUP_KEEP_DAYS=14 bash script/ops/chatwoot_backup.sh >> backup/cron.log 2>&1
 ```
 
+### 1.4 Systemd timer (khuyến nghị trên VPS)
+Repo đã có unit templates:
+- `script/ops/systemd/chatwoot-backup.service`
+- `script/ops/systemd/chatwoot-backup.timer`
+
+1) Copy units lên host và chỉnh path trong unit:
+```sh
+sudo cp script/ops/systemd/chatwoot-backup.service /etc/systemd/system/chatwoot-backup.service
+sudo cp script/ops/systemd/chatwoot-backup.timer /etc/systemd/system/chatwoot-backup.timer
+sudoedit /etc/systemd/system/chatwoot-backup.service
+```
+
+2) (Tuỳ chọn) tạo env file cho unit để set overlay compose / retention:
+```sh
+sudo install -d -m 0750 /etc/chatwoot
+sudoedit /etc/chatwoot/ops.env
+```
+
+Ví dụ nội dung `/etc/chatwoot/ops.env`:
+```sh
+CW_ENV_FILE=/path/to/chatwoot/.env
+CW_COMPOSE_FILES="docker-compose.production.yaml docker-compose.caddy.yaml"
+CW_BACKUP_KEEP_DAYS=14
+```
+
+3) Enable timer:
+```sh
+sudo systemctl daemon-reload
+sudo systemctl enable --now chatwoot-backup.timer
+systemctl list-timers --all | grep chatwoot-backup
+```
+
 ## 2) Monitoring / alert tối thiểu
 
 Repo đã có script healthcheck chạy trên host:
@@ -93,6 +125,33 @@ CW_ALERT_WEBHOOK_MODE=discord CW_ALERT_WEBHOOK_URL="https://..." bash script/ops
 ```
 
 Gợi ý: chạy script theo lịch (cron/systemd timer) mỗi 1–5 phút để có alert sớm.
+
+### 2.3 Systemd timer (mỗi 5 phút)
+Repo đã có unit templates:
+- `script/ops/systemd/chatwoot-healthcheck.service`
+- `script/ops/systemd/chatwoot-healthcheck.timer`
+
+1) Copy units lên host và chỉnh path trong unit:
+```sh
+sudo cp script/ops/systemd/chatwoot-healthcheck.service /etc/systemd/system/chatwoot-healthcheck.service
+sudo cp script/ops/systemd/chatwoot-healthcheck.timer /etc/systemd/system/chatwoot-healthcheck.timer
+sudoedit /etc/systemd/system/chatwoot-healthcheck.service
+```
+
+2) (Tuỳ chọn) tạo `/etc/chatwoot/ops.env` như mục (1.4) để set:
+```sh
+CW_ENV_FILE=/path/to/chatwoot/.env
+CW_COMPOSE_FILES="docker-compose.production.yaml docker-compose.caddy.yaml"
+CW_ALERT_WEBHOOK_MODE=discord
+CW_ALERT_WEBHOOK_URL=https://...
+```
+
+3) Enable timer:
+```sh
+sudo systemctl daemon-reload
+sudo systemctl enable --now chatwoot-healthcheck.timer
+systemctl list-timers --all | grep chatwoot-healthcheck
+```
 
 ## 3) Kết luận
 
