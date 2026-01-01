@@ -19,7 +19,7 @@ Mặc định stack sẽ dùng các host port (bind vào `127.0.0.1`):
 PASS nếu không có service khác đang chiếm các port này.
 
 Lệnh kiểm tra:
-- `ss -ltn | rg -n ":(3000|5432|6379)\\b" || true`
+- `ss -ltn | grep -E ":(3000|5432|6379)([^0-9]|$)" || true`
 
 Nếu xung đột port, dùng các biến override sau (không cần sửa file YAML):
 - `CW_WEB_PORT` (mặc định `3000`)
@@ -133,7 +133,7 @@ docker compose -f docker-compose.production.yaml exec -T rails \
 
 ### Volume persist
 - PASS nếu thấy volumes:
-  - `docker volume ls | rg -n "chatwoot_(postgres_data|redis_data|storage_data)" || true`
+  - `docker volume ls | grep -E "chatwoot_(postgres_data|redis_data|storage_data)" || true`
 
 ### Restart stack không mất dữ liệu
 1) Stop:
