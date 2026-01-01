@@ -1,0 +1,116 @@
+# Phase 3 — Backup/Restore + Upgrade Chatwoot (Docker Compose prod)
+
+Phase này là runbook **sao lưu/khôi phục** và **nâng cấp** cho stack chạy theo `docker-compose.production.yaml`.
+
+## 0) Điều kiện tiên quyết (pass/fail rõ ràng)
+
+### Phase 0 đang chạy ổn định
+- PASS nếu service đều `Up` và (sau khi boot) hiển thị `(healthy)`:
+  - `docker compose -f docker-compose.production.yaml ps`
+
+### Đủ dung lượng để lưu backup
+- PASS nếu còn đủ disk (tuỳ dữ liệu attachments):
+  - `df -h`
+
+### Có thư mục lưu backup (trên host)
+- PASS nếu tạo được:
+  - `mkdir -p backup`
+
+## 1) Backup (khuyến nghị theo thứ tự)
+
+### 1.1 Backup cấu hình `.env` (quan trọng)
+> `.env` chứa secret. **Không commit**, lưu ở nơi an toàn.
+
+- `cp .env "backup/env-$(date +%F-%H%M%S).env"`
+
+### 1.2 Backup Postgres (SQL dump)
+- PASS nếu tạo được file `.sql.gz` và size > 0:
+```sh
+docker compose -f docker-compose.production.yaml exec -T postgres \
+  sh -lc 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  | gzip > "backup/pgdump-$(date +%F-%H%M%S).sql.gz"
+```
+
+### 1.3 Backup storage (attachments)
+> Volume `storage_data` được mount vào `rails` tại `/app/storage`.
+
+- PASS nếu tạo được file `.tgz` và size > 0:
+```sh
+docker compose -f docker-compose.production.yaml exec -T rails \
+  sh -lc 'tar -czf - -C /app/storage .' \
+  > "backup/storage-$(date +%F-%H%M%S).tgz"
+```
+
+## 2) Restore (khôi phục)
+
+> CẢNH BÁO: restore sẽ ghi đè dữ liệu. Khuyến nghị làm trên môi trường staging trước.
+
+### 2.1 Stop app layer (giữ DB/Redis)
+```sh
+docker compose -f docker-compose.production.yaml stop rails sidekiq
+```
+
+### 2.2 Restore Postgres từ dump
+Tuỳ chọn A (restore trực tiếp, có thể fail nếu schema/constraints xung đột):
+```sh
+gunzip -c backup/pgdump-*.sql.gz | docker compose -f docker-compose.production.yaml exec -T postgres \
+  sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+```
+
+Tuỳ chọn B (reset schema trước khi restore; sẽ xoá toàn bộ data trong DB):
+```sh
+docker compose -f docker-compose.production.yaml exec -T postgres sh -lc \
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"'
+
+gunzip -c backup/pgdump-*.sql.gz | docker compose -f docker-compose.production.yaml exec -T postgres \
+  sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1'
+```
+
+### 2.3 Restore storage (attachments)
+```sh
+cat backup/storage-*.tgz | docker compose -f docker-compose.production.yaml exec -T rails \
+  sh -lc 'mkdir -p /app/storage && tar -xzf - -C /app/storage'
+```
+
+### 2.4 Start lại stack
+```sh
+docker compose -f docker-compose.production.yaml up -d
+```
+
+PASS nếu Web UI truy cập được:
+- `curl -fsS -o /dev/null -w '%{http_code}\\n' "http://127.0.0.1:${CW_WEB_PORT:-3000}/"`
+
+## 3) Upgrade (nâng cấp)
+
+### 3.1 Chuẩn bị
+- Luôn backup theo mục (1) trước khi upgrade.
+- Nên **pin version** bằng `CW_IMAGE_TAG` trong `.env` (hoặc export khi chạy compose).
+
+### 3.2 Thực hiện upgrade
+Ví dụ upgrade lên một version cụ thể:
+```sh
+CW_IMAGE_TAG=4.9.1 docker compose -f docker-compose.production.yaml pull
+CW_IMAGE_TAG=4.9.1 docker compose -f docker-compose.production.yaml up -d
+```
+
+Nếu đang chạy overlay (Phase 1/2), dùng cả hai file khi pull/up:
+```sh
+CW_IMAGE_TAG=4.9.1 docker compose -f docker-compose.production.yaml -f docker-compose.caddy.yaml pull
+CW_IMAGE_TAG=4.9.1 docker compose -f docker-compose.production.yaml -f docker-compose.caddy.yaml up -d
+```
+
+PASS nếu:
+- `docker compose -f docker-compose.production.yaml ps` không có container `Restarting`
+- Web UI trả `200/302`
+
+## 4) Rollback (nếu cần)
+
+1) Set `CW_IMAGE_TAG` về version cũ.
+2) `docker compose ... pull && docker compose ... up -d`
+3) Nếu dữ liệu đã thay đổi theo migration, restore lại DB/storage từ backup.
+
+## 5) Kết luận
+
+Khi backup tạo được file hợp lệ, restore/upgrade chạy PASS theo các checkpoint ⇒ **OPS THÀNH CÔNG**.
+
+Refs: `doc/phase_0.md`, `docker-compose.production.yaml`, `docker-compose.caddy.yaml`, `docker-compose.zalo-adapter.yaml`

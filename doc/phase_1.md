@@ -125,4 +125,4 @@ Health check (host):
 
 Khi checkpoint (4.1) + (4.2) PASS, và (4.3) PASS khi có Zalo session hợp lệ ⇒ **KẾT NỐI THÀNH CÔNG**.
 
-Refs: `/home/quenn/chatwoot-zcajs/doc/phase_0.md`, `integrations/zalo_adapter/README.md`
+Refs: `doc/phase_0.md`, `docker-compose.zalo-adapter.yaml`, `integrations/zalo_adapter/README.md`

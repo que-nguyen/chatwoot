@@ -73,6 +73,9 @@ File `.env` đang được `.gitignore` ignore. Tạo từ mẫu:
 Chạy (thêm override port nếu cần):
 - `CW_WEB_PORT=3000 docker compose -f docker-compose.production.yaml up -d`
 
+Tuỳ chọn (khuyến nghị production): **pin version Chatwoot image** để tránh upgrade ngoài ý muốn:
+- `CW_IMAGE_TAG=4.9.1 docker compose -f docker-compose.production.yaml up -d`
+
 Ghi chú:
 - Compose có service `migrate` chạy `rails db:chatwoot_prepare` rồi mới start `rails` + `sidekiq` để tránh crash loop do thiếu migrations.
 
@@ -159,4 +162,4 @@ Khi thỏa các checkpoint ở mục (3) và kiểm tra persistence ở mục (4
 
 Nếu cần public access + TLS qua domain, xem thêm `doc/phase_2.md`.
 
-Refs: `/home/quenn/chatwoot-zcajs/doc/phase_0.md`
+Refs: `docker-compose.production.yaml`, `.env.example`, `doc/phase_2.md`
