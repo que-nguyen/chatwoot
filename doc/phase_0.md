@@ -29,6 +29,10 @@ Nếu xung đột port, dùng các biến override sau (không cần sửa file 
 Ví dụ:
 - `CW_WEB_PORT=3001 CW_POSTGRES_PORT=5434 CW_REDIS_PORT=6380 docker compose -f docker-compose.production.yaml up -d`
 
+Ghi chú: nếu bạn set các biến này theo kiểu “one-shot” (đặt trước lệnh `docker compose`), chúng **không tự áp dụng** cho các lệnh checkpoint chạy sau đó. Để các lệnh `curl` dùng đúng port, hãy:
+- export biến vào shell (ví dụ `export CW_WEB_PORT=3001`), hoặc
+- thay trực tiếp port trong URL (ví dụ `http://127.0.0.1:3001/`).
+
 ### Disk/RAM
 - PASS nếu còn đủ dung lượng và RAM để chạy Postgres + Redis + Rails.
 - Lệnh kiểm tra nhanh:

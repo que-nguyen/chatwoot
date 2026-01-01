@@ -9,6 +9,7 @@ Tài liệu này hướng dẫn chạy `integrations/zalo_adapter` và cấu hì
   - `docker compose -f docker-compose.production.yaml ps`
 - PASS nếu Web UI trả `200/302`:
   - `curl -fsS -o /dev/null -w '%{http_code}\\n' "http://127.0.0.1:${CW_WEB_PORT:-3000}/"`
+  - Ghi chú: nếu bạn override `CW_WEB_PORT` theo kiểu one-shot, hãy `export CW_WEB_PORT=...` hoặc thay port trực tiếp trong URL.
 
 ### zca-js dependency
 - Mặc định adapter cài `zca-js` từ npm khi chạy `npm install`.
@@ -89,6 +90,7 @@ docker compose \
 
 Health check (host):
 - `curl -fsS "http://127.0.0.1:${ZALO_ADAPTER_HOST_PORT:-3002}/health"`
+  - Ghi chú: nếu bạn override `ZALO_ADAPTER_HOST_PORT` theo kiểu one-shot, hãy `export ZALO_ADAPTER_HOST_PORT=...` hoặc thay port trực tiếp trong URL.
 
 ## 4) Checkpoint kiểm chứng chạy thành công
 

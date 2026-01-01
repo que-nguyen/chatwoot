@@ -32,7 +32,7 @@ while IFS= read -r id; do
   [[ -z "$id" ]] && continue
 
   line="$(
-    docker inspect -f '{{ index .Config.Labels "com.docker.compose.service" }}\t{{.Name}}\t{{.State.Status}}\t{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}\t{{.State.ExitCode}}' "$id"
+    docker inspect -f $'{{ index .Config.Labels "com.docker.compose.service" }}\t{{.Name}}\t{{.State.Status}}\t{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}\t{{.State.ExitCode}}' "$id"
   )"
 
   IFS=$'\t' read -r service name status health exit_code <<< "$line"
@@ -98,4 +98,3 @@ fi
 
 echo "$message" >&2
 exit 1
-
