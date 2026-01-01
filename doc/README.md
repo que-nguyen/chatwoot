@@ -19,3 +19,4 @@ Các tài liệu trong thư mục này là runbook triển khai/vận hành Chat
 
 Khi bạn chạy thêm Phase 1/2 (overlay), hãy include **đầy đủ** các file compose trong mọi lệnh `docker compose up/pull/logs/down` để tránh orphan containers và thay đổi port mapping ngoài ý muốn.
 
+Tip: dùng wrapper `script/ops/chatwoot_compose.sh` để luôn include đúng `--env-file` + danh sách compose files (set `CW_ENV_FILE` và `CW_COMPOSE_FILES`).
