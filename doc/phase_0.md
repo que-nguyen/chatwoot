@@ -113,7 +113,7 @@ Tuỳ chọn (headless, để smoke-test DB): tạo SuperAdmin bằng rails runn
 ```sh
 docker compose -f docker-compose.production.yaml exec -T rails \
   bundle exec rails runner \
-  "pw = SecureRandom.hex(16) + 'A!'; AccountBuilder.new(account_name: 'Demo', user_full_name: 'Admin', email: 'admin@example.com', user_password: pw, super_admin: true, confirmed: true).perform; puts 'created admin@example.com'"
+  "email = 'admin@example.com'; user = User.find_by(email: email); if user; puts \"exists #{email}\"; else; pw = SecureRandom.hex(16) + 'A!'; AccountBuilder.new(account_name: 'Demo', user_full_name: 'Admin', email: email, user_password: pw, super_admin: true, confirmed: true).perform; puts \"created #{email}\"; end"
 ```
 
 ### 3.3 Tạo inbox + gửi thử tin nhắn (API inbox)
@@ -136,6 +136,10 @@ docker compose -f docker-compose.production.yaml exec -T rails \
   - `docker volume ls | grep -E "chatwoot_(postgres_data|redis_data|storage_data)" || true`
 
 ### Restart stack không mất dữ liệu
+Ghi chú:
+- Nếu bạn đang dùng port override (`CW_WEB_PORT/CW_POSTGRES_PORT/CW_REDIS_PORT`) theo kiểu one-shot, hãy `export` vào shell hoặc đặt trong `.env` trước khi chạy `down/up`, nếu không Compose có thể recreate container với port mặc định và fail do port conflict.
+- Nếu đang chạy overlay (Phase 1/2), include các file overlay tương ứng trong lệnh `down/up` để tránh orphan containers.
+
 1) Stop:
    - `docker compose -f docker-compose.production.yaml down`
 2) Start lại:

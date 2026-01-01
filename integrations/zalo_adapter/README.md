@@ -45,6 +45,7 @@ Each account object can override any single-account setting using camelCase keys
 `chatwootBaseUrl`, `chatwootInboxIdentifier`, `chatwootWebhookPath`, `chatwootHmacToken`,
 `zaloLoginMode`, `zaloCookiePath`, `zaloCookieJson`, `zaloQrPath`, `zaloImei`, `zaloUserAgent`,
 `zaloSelfListen`, `zaloCheckUpdate`, `zaloLogging`, `zaloProxyUrl`, and optional `name`/`label` for logs.
+If you don't provide `name`/`label`, logs default to `account-<index>` (1-based).
 
 When multiple accounts are configured and no per-account webhook path is provided,
 paths default to `/webhooks/chatwoot/<index>` (1-based).

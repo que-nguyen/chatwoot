@@ -134,7 +134,7 @@ function buildAccounts(baseConfig) {
   return items.map((raw, index) => {
     const resolvedRaw = resolveAccountPaths(raw, baseDir);
     const config = mergeAccountConfig(baseConfig, resolvedRaw, index, total);
-    const label = resolveAccountLabel(raw, index, config);
+    const label = resolveAccountLabel(raw, index);
     return {
       id: raw?.id || raw?.name || `account-${index + 1}`,
       label,
@@ -147,14 +147,8 @@ function buildAccounts(baseConfig) {
   });
 }
 
-function resolveAccountLabel(raw, index, config) {
-  return (
-    raw?.label ||
-    raw?.name ||
-    raw?.id ||
-    config.chatwootInboxIdentifier ||
-    `account-${index + 1}`
-  );
+function resolveAccountLabel(raw, index) {
+  return raw?.label || raw?.name || raw?.id || `account-${index + 1}`;
 }
 
 function mergeAccountConfig(baseConfig, raw, index, total) {
