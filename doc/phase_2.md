@@ -51,7 +51,7 @@ docker compose \
   up -d
 ```
 
-Theo dõi log:
+Theo dõi log (nếu chạy kèm adapter, thêm `-f docker-compose.zalo-adapter.yaml`):
 ```sh
 docker compose \
   -f docker-compose.production.yaml \
