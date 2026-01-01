@@ -43,8 +43,12 @@ Ví dụ:
 
 ## 1) Chuẩn bị cấu hình `.env` (không commit)
 
-File `.env` đang được `.gitignore` ignore. Tạo từ mẫu:
+File env (mặc định `.env`) đang được `.gitignore` ignore. Tạo từ mẫu:
 - `cp .env.example .env`
+
+Tuỳ chọn (tách file staging/prod): dùng file khác và set `CW_ENV_FILE` khi chạy compose:
+- `cp .env.example .env.production`
+- `CW_ENV_FILE=.env.production docker compose -f docker-compose.production.yaml up -d`
 
 ### Biến quan trọng (bắt buộc)
 - `SECRET_KEY_BASE`

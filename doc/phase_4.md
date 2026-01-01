@@ -46,7 +46,7 @@ bash script/ops/chatwoot_backup.sh
 ### 1.2 Tuỳ chọn cấu hình qua env vars
 - `CW_BACKUP_DIR` (default: `backup`)
 - `CW_BACKUP_KEEP_DAYS` (default: `14`)
-- `CW_ENV_FILE` (default: `.env`)
+- `CW_ENV_FILE` (default: `.env`) — nên trùng với env file đang dùng cho stack
 - `CW_COMPOSE_FILES` (default: `docker-compose.production.yaml`)
   - Nếu bạn chạy overlay, set ví dụ:
     - Phase 2 (Caddy): `CW_COMPOSE_FILES="docker-compose.production.yaml docker-compose.caddy.yaml"`
@@ -99,4 +99,3 @@ Gợi ý: chạy script theo lịch (cron/systemd timer) mỗi 1–5 phút để
 - Khi (1) backup chạy PASS theo lịch và (2) healthcheck PASS/alert hoạt động ⇒ **OPS baseline hoàn tất**.
 
 Refs: `doc/phase_3.md`, `docker-compose.production.yaml`, `script/ops/chatwoot_backup.sh`, `script/ops/chatwoot_healthcheck.sh`
-

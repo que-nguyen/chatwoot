@@ -1,6 +1,6 @@
 x-chatwoot: &chatwoot
   image: chatwoot/chatwoot:${CW_IMAGE_TAG:-latest}
-  env_file: .env ## Change this file for customized env variables
+  env_file: ${CW_ENV_FILE:-.env} ## Change this file for customized env variables
   volumes:
     - storage_data:/app/storage
 
@@ -89,7 +89,7 @@ services:
     image: redis:alpine
     restart: always
     command: ["sh", "-c", "test -n \"$REDIS_PASSWORD\" || (echo 'REDIS_PASSWORD is required' && exit 1); redis-server --requirepass \"$REDIS_PASSWORD\""]
-    env_file: .env
+    env_file: ${CW_ENV_FILE:-.env}
     volumes:
       - redis_data:/data
     ports:
