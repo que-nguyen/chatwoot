@@ -21,6 +21,11 @@ else
 fi
 
 compose=(docker compose)
+if [[ -f "$env_file" ]]; then
+  compose+=(--env-file "$env_file")
+else
+  echo "WARN: env file not found at '$env_file' (docker compose will rely on exported env vars)" >&2
+fi
 for file in "${compose_files[@]}"; do
   compose+=(-f "$file")
 done
@@ -60,4 +65,3 @@ else
 fi
 
 echo "Backup complete in '$backup_dir' (timestamp=$timestamp)"
-

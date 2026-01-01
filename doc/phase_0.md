@@ -55,7 +55,9 @@ File env (mặc định `.env`) đang được `.gitignore` ignore. Tạo từ m
 
 Tuỳ chọn (tách file staging/prod): dùng file khác và set `CW_ENV_FILE` khi chạy compose:
 - `cp .env.example .env.production`
-- `CW_ENV_FILE=.env.production docker compose -f docker-compose.production.yaml up -d`
+- `CW_ENV_FILE=.env.production docker compose --env-file .env.production -f docker-compose.production.yaml up -d`
+
+Ghi chú quan trọng: `CW_ENV_FILE` ảnh hưởng `env_file:` (env vars đi vào container), còn `--env-file` ảnh hưởng biến dùng để render Compose YAML (port mapping, biến bắt buộc như `POSTGRES_PASSWORD`, ...). Production/staging nên luôn set cả 2 để tránh “mismatch” giữa containers.
 
 ### Biến quan trọng (bắt buộc)
 - `SECRET_KEY_BASE`
