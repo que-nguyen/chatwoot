@@ -77,7 +77,7 @@ Ghi chú:
 - Compose có service `migrate` chạy `rails db:chatwoot_prepare` rồi mới start `rails` + `sidekiq` để tránh crash loop do thiếu migrations.
 
 ### Theo dõi trạng thái & log
-- PASS nếu tất cả service `Up` và không `Restarting`:
+- PASS nếu tất cả service `Up` và (sau khi boot) hiển thị `(healthy)`:
   - `docker compose -f docker-compose.production.yaml ps`
 - Xem log:
   - `docker compose -f docker-compose.production.yaml logs -f postgres redis migrate rails sidekiq`
