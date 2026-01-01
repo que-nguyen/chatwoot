@@ -1,0 +1,29 @@
+services:
+  zalo_adapter:
+    image: node:20-bookworm-slim
+    working_dir: /app/integrations/zalo_adapter
+    command: ["sh", "-lc", "npm install --no-package-lock && npm start"]
+    env_file:
+      - ./integrations/zalo_adapter/.env
+    environment:
+      - PORT=3001
+    volumes:
+      - ./:/app
+      - zalo_adapter_node_modules:/app/integrations/zalo_adapter/node_modules
+    ports:
+      - "127.0.0.1:${ZALO_ADAPTER_HOST_PORT:-3002}:3001"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  zalo_adapter_node_modules:

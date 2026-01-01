@@ -11,7 +11,8 @@ This adapter connects Zalo Web (via `zca-js`) to a Chatwoot API inbox.
 1. Create a Chatwoot API inbox and copy its `identifier`.
 2. Set the inbox `webhook_url` to this adapter (example: `http://localhost:3001/webhooks/chatwoot/secret`).
 3. Install dependencies from this folder:
-   - `npm install` (uses local `file:../../../zca-js`)
+   - `npm install`
+   - Optional (local `zca-js` checkout): `npm install --save file:../../../zca-js`
 4. Provide environment variables (see below or `.env.example`) and start:
    - `npm start`
 
@@ -27,6 +28,7 @@ Optional:
 - `CHATWOOT_WEBHOOK_PATH` (default: `/webhooks/chatwoot`)
 - `CHATWOOT_HMAC_TOKEN` (if the API inbox enforces HMAC)
 - `ZALO_LOGIN_MODE` (`cookie` or `qr`, default: `cookie`)
+- `ZALO_DRY_RUN` (`true` or `false`, default: `false`) - accept Chatwoot webhooks but skip Zalo login/send
 - `ZALO_COOKIE_PATH` (default: `./cookie.json`)
 - `ZALO_COOKIE_JSON` (inline JSON string for cookies; overrides `ZALO_COOKIE_PATH`)
 - `ZALO_QR_PATH` (path to write QR image in `qr` mode, default: `./qr.png`)
@@ -59,6 +61,7 @@ CHATWOOT_WEBHOOK_PATH=/webhooks/chatwoot
 CHATWOOT_HMAC_TOKEN=
 
 ZALO_LOGIN_MODE=cookie
+ZALO_DRY_RUN=false
 ZALO_COOKIE_PATH=./cookie.json
 ZALO_COOKIE_JSON=
 ZALO_QR_PATH=./qr.png
@@ -113,6 +116,7 @@ in `.env`, while each account overrides only what differs.
 - Webhooks with missing or non-Zalo `source_id` values are ignored.
 - Cookie login requires `ZALO_COOKIE_JSON` or a readable file at `ZALO_COOKIE_PATH`.
 - QR logins persist cookies to `ZALO_COOKIE_PATH` (so you can switch to cookie mode later).
+- `ZALO_DRY_RUN=true` can be used to smoke-test webhook delivery without logging in to Zalo.
 - When multiple accounts are configured and no per-account cookie/QR paths are provided, the adapter auto-suffixes them (e.g. `cookie-1.json`, `qr-2.png`).
 - Reaction/undo events are forwarded as informational incoming messages (Chatwoot API inbox does not support editing or deleting messages).
 - Zalo typing events update Chatwoot contact typing indicators (best effort).

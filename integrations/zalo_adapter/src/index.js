@@ -32,6 +32,12 @@ async function start() {
 }
 
 async function startAccount(account) {
+  if (account?.config?.zaloDryRun) {
+    const prefix = account?.label ? `[${account.label}] ` : "";
+    console.log(`${prefix}ZALO_DRY_RUN enabled; skipping Zalo login and listeners`);
+    return;
+  }
+
   const zalo = new Zalo(buildZaloOptions(account));
 
   account.api = await loginZalo(zalo, account);
@@ -91,7 +97,15 @@ function createServer(accounts) {
 
   return http.createServer(async (req, res) => {
     const { pathname } = new URL(req.url, `http://${req.headers.host}`);
-    const account = accountByPath.get(normalizePath(pathname));
+    const normalizedPath = normalizePath(pathname);
+
+    if (req.method === "GET" && normalizedPath === "/health") {
+      res.writeHead(200, { "Content-Type": "text/plain" });
+      res.end("ok");
+      return;
+    }
+
+    const account = accountByPath.get(normalizedPath);
 
     if (req.method === "POST" && account) {
       try {
@@ -513,14 +527,27 @@ async function handleChatwootWebhook(account, payload) {
       console.warn("Skipping webhook without source_id");
       return;
     }
+
+    const content = typeof payload.content === "string" ? payload.content : "";
+    const attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
+
+    if (account?.config?.zaloDryRun) {
+      const prefix = account?.label ? `[${account.label}] ` : "";
+      const trimmed = content.trim();
+      const preview = trimmed.length > 200 ? `${trimmed.slice(0, 200)}…` : trimmed;
+      console.log(`${prefix}[dry-run] outgoing webhook`, {
+        sourceId,
+        preview,
+        attachments: attachments.length
+      });
+      return;
+    }
+
     const thread = parseSourceId(sourceId);
     if (!thread) {
       console.warn("Skipping webhook with unsupported source_id", { sourceId });
       return;
     }
-
-    const content = typeof payload.content === "string" ? payload.content : "";
-    const attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
 
     await sendZaloMessage(account, { thread, content, attachments });
     return;
@@ -538,6 +565,7 @@ function isChatwootPrivate(payload) {
 
 async function handleChatwootTyping(account, payload) {
   if (isChatwootPrivate(payload)) return;
+  if (account?.config?.zaloDryRun) return;
 
   const sourceId = payload?.conversation?.contact_inbox?.source_id;
   if (!sourceId) {
@@ -1051,6 +1079,7 @@ function loadConfig() {
     chatwootWebhookPath: process.env.CHATWOOT_WEBHOOK_PATH || DEFAULT_WEBHOOK_PATH,
     chatwootHmacToken: process.env.CHATWOOT_HMAC_TOKEN || "",
     zaloLoginMode: process.env.ZALO_LOGIN_MODE || "cookie",
+    zaloDryRun: parseBool(process.env.ZALO_DRY_RUN, false),
     zaloCookiePath: process.env.ZALO_COOKIE_PATH || "./cookie.json",
     zaloCookieJson: process.env.ZALO_COOKIE_JSON || "",
     zaloQrPath: process.env.ZALO_QR_PATH || "",
@@ -1078,7 +1107,7 @@ function validateConfig(baseConfig, accounts) {
 
     if (!config.chatwootBaseUrl) missing.push("CHATWOOT_BASE_URL");
     if (!config.chatwootInboxIdentifier) missing.push("CHATWOOT_INBOX_IDENTIFIER");
-    if (config.zaloLoginMode === "cookie") {
+    if (!config.zaloDryRun && config.zaloLoginMode === "cookie") {
       if (!config.zaloImei) missing.push("ZALO_IMEI");
       if (!config.zaloUserAgent) missing.push("ZALO_USER_AGENT");
 
