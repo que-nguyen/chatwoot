@@ -27,6 +27,7 @@ Optional:
 - `PORT` (default: `3001`)
 - `CHATWOOT_WEBHOOK_PATH` (default: `/webhooks/chatwoot`; recommended to include a secret suffix like `/webhooks/chatwoot/<secret>`)
 - `CHATWOOT_HMAC_TOKEN` (recommended; required when API inbox identity validation is enabled; also used to verify `X-Chatwoot-Signature` for Chatwoot → adapter webhooks when present)
+  - Note: if multiple Chatwoot API inboxes point to the same webhook path but use different `hmac_token` values, signature verification will fail (`401`). Use a unique secret webhook path per inbox (or use multi-account config with distinct paths/tokens).
 - `ZALO_LOGIN_MODE` (`cookie` or `qr`, default: `cookie`)
 - `ZALO_DRY_RUN` (`true` or `false`, default: `false`) - accept Chatwoot webhooks but skip Zalo login/send
 - `ZALO_COOKIE_PATH` (default: `./cookie.json`)

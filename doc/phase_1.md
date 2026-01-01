@@ -106,6 +106,9 @@ Health check (host):
 #### 4.2.1 (Tuỳ chọn) Signed webhooks: `X-Chatwoot-Signature`
 - Khi đã set `CHATWOOT_HMAC_TOKEN`, PASS nếu adapter **không** log `Missing X-Chatwoot-Signature...` và không trả `401` do signature mismatch.
 - Nếu adapter vẫn log thiếu signature: khả năng bạn đang chạy Chatwoot image chưa có tính năng ký webhook (adapter sẽ fallback nhận webhook nhưng skip verify).
+- Nếu adapter log `Chatwoot webhook unauthorized: ... signature verification failed`:
+  - kiểm tra `CHATWOOT_HMAC_TOKEN` đang match đúng `hmac_token` của API inbox.
+  - đảm bảo **mỗi** API inbox dùng webhook path riêng (không reuse cùng `/webhooks/chatwoot/<secret>` cho nhiều inbox), nếu không các inbox khác token sẽ mismatch và bị `401`.
 
 Fix (dev/smoke-test): build Chatwoot image từ repo này và chạy với tag local:
 ```sh
