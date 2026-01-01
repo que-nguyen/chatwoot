@@ -113,6 +113,10 @@ docker build -t chatwoot/chatwoot:local -f docker/Dockerfile .
 CW_IMAGE_TAG=local docker compose -f docker-compose.production.yaml -f docker-compose.zalo-adapter.yaml up -d
 ```
 
+PASS nếu:
+- `docker compose ... ps` thấy `rails/sidekiq` chạy image `chatwoot/chatwoot:local`
+- adapter không log `Missing X-Chatwoot-Signature...` cho webhook Chatwoot → adapter
+
 Ghi chú:
 - Nếu bạn đang chạy thêm overlay khác (Phase 2 Caddy), include thêm file đó khi `up/pull/logs` để tránh orphan containers.
 - Nếu bạn đang override `CW_WEB_PORT/CW_POSTGRES_PORT/CW_REDIS_PORT`, hãy `export` hoặc set trong `.env` trước khi chạy lại `docker compose up -d` để tránh port conflict (xem `doc/phase_0.md`).

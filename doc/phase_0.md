@@ -86,6 +86,11 @@ Ghi chú quan trọng: `CW_ENV_FILE` ảnh hưởng `env_file:` (env vars đi v�
 Chạy (thêm override port nếu cần):
 - `CW_WEB_PORT=3000 docker compose -f docker-compose.production.yaml up -d`
 
+Nếu compose báo `Found orphan containers (...)`:
+- Nghĩa là trước đó bạn đã chạy stack với overlay compose khác (Phase 1/2/...) nhưng lệnh hiện tại không include các file đó.
+- Fix: include đầy đủ các file overlay tương ứng trong mọi lệnh `docker compose`, hoặc cleanup orphan containers bằng:
+  - `docker compose -f docker-compose.production.yaml down --remove-orphans`
+
 Tuỳ chọn (khuyến nghị production): **pin version Chatwoot image** để tránh upgrade ngoài ý muốn:
 - `CW_IMAGE_TAG=4.9.1 docker compose -f docker-compose.production.yaml up -d`
 
