@@ -48,6 +48,18 @@ Khuyến nghị (để tái lập được và tránh quên biến khi chạy ov
 - Nếu triển khai trên VPS và muốn truy cập từ bên ngoài:
   - Mở port ở firewall/reverse proxy tương ứng với `CW_WEB_PORT` (hoặc cấu hình Nginx/Caddy làm reverse proxy).
 
+### (Tuỳ chọn) Preflight script (khuyến nghị trước khi `up -d`)
+Repo có script kiểm tra nhanh:
+- `bash script/ops/chatwoot_preflight.sh`
+
+PASS nếu script in `Preflight OK` (exit code `0`).
+
+Ghi chú:
+- Script **không** in ra secret values; chỉ check tồn tại/độ dài và port conflict.
+- Dùng `CW_ENV_FILE` (mặc định `.env`). Có thể override:
+  - `bash script/ops/chatwoot_preflight.sh --env-file .env.production`
+- Nếu bạn đang dùng port override (`CW_WEB_PORT/CW_POSTGRES_PORT/CW_REDIS_PORT`), hãy đảm bảo các biến này được export hoặc có trong env file bạn dùng để script check đúng port.
+
 ## 1) Chuẩn bị cấu hình `.env` (không commit)
 
 File env (mặc định `.env`) đang được `.gitignore` ignore. Tạo từ mẫu:
