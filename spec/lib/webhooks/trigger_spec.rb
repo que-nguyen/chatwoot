@@ -41,6 +41,23 @@ describe Webhooks::Trigger do
       trigger.execute(url, payload, webhook_type)
     end
 
+    it 'adds signature header for api inbox webhooks' do
+      channel_api = create(:channel_api, account: account)
+      payload = { hello: :hello, inbox_id: channel_api.inbox.id }
+      signature = OpenSSL::HMAC.hexdigest('sha256', channel_api.hmac_token, payload.to_json)
+
+      expect(RestClient::Request).to receive(:execute)
+        .with(
+          method: :post,
+          url: url,
+          payload: payload.to_json,
+          headers: { content_type: :json, accept: :json, 'X-Chatwoot-Signature' => "sha256=#{signature}" },
+          timeout: webhook_timeout
+        ).once
+
+      trigger.execute(url, payload, webhook_type)
+    end
+
     it 'updates message status if webhook fails for message-created event' do
       payload = { event: 'message_created', conversation: { id: conversation.id }, id: message.id }
 

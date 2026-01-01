@@ -109,14 +109,24 @@ function createServer(accounts) {
 
     if (req.method === "POST" && account) {
       try {
-        const payload = await readJson(req);
-        await handleChatwootWebhook(account, payload);
+        const { body, json } = await readJson(req);
+        verifyChatwootWebhookSignature(account, req, body);
+        await handleChatwootWebhook(account, json);
         res.writeHead(200, { "Content-Type": "text/plain" });
         res.end("ok");
       } catch (error) {
-        console.error("Chatwoot webhook error:", error);
-        res.writeHead(500, { "Content-Type": "text/plain" });
-        res.end("error");
+        const message = String(error?.message || error || "");
+        const status = message.toLowerCase().includes("signature") ? 401 : 500;
+
+        if (status === 401) {
+          console.warn("Chatwoot webhook unauthorized:", error?.message || error);
+          res.writeHead(401, { "Content-Type": "text/plain" });
+          res.end("unauthorized");
+        } else {
+          console.error("Chatwoot webhook error:", error);
+          res.writeHead(500, { "Content-Type": "text/plain" });
+          res.end("error");
+        }
       }
       return;
     }
@@ -1061,8 +1071,46 @@ async function readJson(req) {
   for await (const chunk of req) {
     chunks.push(chunk);
   }
-  const body = Buffer.concat(chunks).toString("utf-8").trim();
-  return body ? JSON.parse(body) : {};
+  const body = Buffer.concat(chunks).toString("utf-8");
+  const json = body.trim() ? JSON.parse(body) : {};
+  return { body, json };
+}
+
+function verifyChatwootWebhookSignature(account, req, rawBody) {
+  const token = account?.config?.chatwootHmacToken;
+  if (!token) return;
+
+  const prefix = account?.label ? `[${account.label}] ` : "";
+  const header = String(req?.headers?.["x-chatwoot-signature"] || "").trim();
+  if (!header) {
+    console.warn(`${prefix}Missing X-Chatwoot-Signature header; skipping verification`);
+    return;
+  }
+
+  const provided = header.toLowerCase().startsWith("sha256=") ? header.slice("sha256=".length) : header;
+  const providedBuffer = hexToBuffer(provided);
+  if (!providedBuffer) {
+    throw new Error("Chatwoot webhook error: invalid signature format");
+  }
+
+  const expected = crypto.createHmac("sha256", token).update(rawBody).digest("hex");
+  const expectedBuffer = Buffer.from(expected, "hex");
+
+  if (providedBuffer.length !== expectedBuffer.length) {
+    throw new Error("Chatwoot webhook error: signature verification failed");
+  }
+
+  if (!crypto.timingSafeEqual(providedBuffer, expectedBuffer)) {
+    throw new Error("Chatwoot webhook error: signature verification failed");
+  }
+}
+
+function hexToBuffer(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) return null;
+  if (normalized.length % 2 !== 0) return null;
+  if (/[^0-9a-f]/i.test(normalized)) return null;
+  return Buffer.from(normalized, "hex");
 }
 
 function loadConfig() {

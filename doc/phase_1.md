@@ -35,14 +35,15 @@ Ví dụ tạo inbox và set webhook URL (thay `<secret>`):
 docker compose -f docker-compose.production.yaml exec -T rails \
   bundle exec rails runner \
   "account = Account.order(:id).last; \
-   channel = account.api_channels.create!(webhook_url: 'http://zalo_adapter:3001/webhooks/chatwoot/<secret>', hmac_mandatory: false); \
+   channel = account.api_channels.create!(webhook_url: 'http://zalo_adapter:3001/webhooks/chatwoot/<secret>', hmac_mandatory: true); \
    inbox = Inbox.create!(account: account, name: 'Zalo API Inbox', channel: channel); \
    puts \"inbox_id=#{inbox.id} identifier=#{channel.identifier} hmac_token=#{channel.hmac_token} hmac_mandatory=#{channel.hmac_mandatory}\""
 ```
 
-Nếu muốn bật xác thực HMAC cho webhook (khuyến nghị production):
-- set `hmac_mandatory: true`
-- và set `CHATWOOT_HMAC_TOKEN=<hmac_token>` ở adapter.
+Khuyến nghị production: bật HMAC identity validation cho API inbox (lệnh trên đã bật `hmac_mandatory: true`).
+Adapter cần set `CHATWOOT_HMAC_TOKEN=<hmac_token>` để:
+- gửi Zalo → Chatwoot kèm `identifier_hash` (bắt buộc khi `hmac_mandatory=true`)
+- verify header `X-Chatwoot-Signature` khi nhận webhook Chatwoot → adapter (nếu có)
 
 ## 2) Cấu hình adapter
 
@@ -55,7 +56,7 @@ Các biến quan trọng (khi chạy adapter trong Docker cùng project Chatwoot
 - `CHATWOOT_BASE_URL=http://rails:3000`
 - `CHATWOOT_INBOX_IDENTIFIER=<identifier>` (từ bước 1)
 - `CHATWOOT_WEBHOOK_PATH=/webhooks/chatwoot/<secret>` (khớp webhook URL ở bước 1)
-- `CHATWOOT_HMAC_TOKEN=<hmac_token>` nếu bật HMAC
+- `CHATWOOT_HMAC_TOKEN=<hmac_token>` (khuyến nghị; bắt buộc nếu `hmac_mandatory=true`)
 
 Zalo login:
 - Cookie mode:

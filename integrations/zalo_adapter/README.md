@@ -26,7 +26,7 @@ Required:
 Optional:
 - `PORT` (default: `3001`)
 - `CHATWOOT_WEBHOOK_PATH` (default: `/webhooks/chatwoot`)
-- `CHATWOOT_HMAC_TOKEN` (if the API inbox enforces HMAC)
+- `CHATWOOT_HMAC_TOKEN` (recommended; required when API inbox identity validation is enabled; also used to verify `X-Chatwoot-Signature` for Chatwoot → adapter webhooks when present)
 - `ZALO_LOGIN_MODE` (`cookie` or `qr`, default: `cookie`)
 - `ZALO_DRY_RUN` (`true` or `false`, default: `false`) - accept Chatwoot webhooks but skip Zalo login/send
 - `ZALO_COOKIE_PATH` (default: `./cookie.json`)
@@ -135,4 +135,4 @@ in `.env`, while each account overrides only what differs.
 - The adapter uses a Chatwoot API inbox (Channel::Api) so we can integrate Zalo without touching Chatwoot UI, auth, or core business logic.
 - Zalo accounts are configured via environment variables or `accounts.json`, keeping account setup outside Chatwoot settings as required.
 - Group chats map to a single Chatwoot contact (group name or fallback) because API inbox conversations are contact-based.
-- If the API inbox has identity validation enabled, set `CHATWOOT_HMAC_TOKEN` to the inbox HMAC token.
+- If the API inbox has identity validation enabled, set `CHATWOOT_HMAC_TOKEN` to the inbox HMAC token (this also enables webhook signature verification when `X-Chatwoot-Signature` is sent).

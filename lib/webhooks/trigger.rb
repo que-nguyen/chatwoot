@@ -21,13 +21,47 @@ class Webhooks::Trigger
   private
 
   def perform_request
+    payload_json = @payload.to_json
+    headers = { content_type: :json, accept: :json }
+    headers.merge!(api_inbox_signature_headers(payload_json))
+
     RestClient::Request.execute(
       method: :post,
       url: @url,
-      payload: @payload.to_json,
-      headers: { content_type: :json, accept: :json },
+      payload: payload_json,
+      headers: headers,
       timeout: webhook_timeout
     )
+  end
+
+  def api_inbox_signature_headers(payload_json)
+    return {} unless @webhook_type == :api_inbox_webhook
+
+    token = api_inbox_hmac_token
+    return {} if token.blank?
+
+    signature = OpenSSL::HMAC.hexdigest('sha256', token, payload_json)
+    { 'X-Chatwoot-Signature' => "sha256=#{signature}" }
+  end
+
+  def api_inbox_hmac_token
+    inbox_id = api_inbox_id
+    return if inbox_id.blank?
+
+    inbox = Inbox.find_by(id: inbox_id)
+    return if inbox.blank?
+    return if inbox.channel_type != 'Channel::Api'
+
+    inbox.channel&.hmac_token
+  end
+
+  def api_inbox_id
+    payload = @payload.respond_to?(:with_indifferent_access) ? @payload.with_indifferent_access : @payload
+
+    payload[:inbox_id] ||
+      payload.dig(:conversation, :inbox_id) ||
+      payload.dig(:inbox, :id) ||
+      payload.dig(:contact_inbox, :inbox, :id)
   end
 
   def handle_error(error)
