@@ -117,6 +117,9 @@ Ghi chú:
 
 ## 3) Checkpoint kiểm chứng chạy thành công
 
+Tuỳ chọn (chạy nhanh, tái lập được): smoke-test service health + Web UI:
+- `bash script/ops/chatwoot_smoketest.sh`
+
 ### 3.1 Web UI truy cập được
 - PASS nếu HTTP trả về `200` hoặc `302`:
   - `curl -fsS -o /dev/null -w '%{http_code}\\n' "http://127.0.0.1:${CW_WEB_PORT:-3000}/"`
