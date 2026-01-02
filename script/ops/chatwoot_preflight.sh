@@ -620,16 +620,11 @@ check_firewall_notice() {
       if command -v sudo >/dev/null 2>&1; then
         if sudo -n true 2>/dev/null; then
           ufw_out="$(sudo ufw status 2>/dev/null || true)"
-        elif [[ -t 0 ]]; then
-          echo "INFO ufw detected; reading status may require sudo." >&2
-          if sudo -v; then
-            ufw_out="$(sudo ufw status 2>/dev/null || true)"
-          fi
         fi
       fi
     fi
     if [[ -z "$ufw_out" ]]; then
-      check_warn "ufw detected, but unable to read status (try: sudo ufw status). Ensure required ports are allowed"
+      check_warn "ufw detected, but unable to read status without sudo (try: sudo ufw status). Ensure required ports are allowed"
     elif printf "%s" "$ufw_out" | grep -qi "^Status:[[:space:]]*active"; then
       if [[ "${#ports[@]}" -gt 0 ]]; then
         check_warn "ufw is active; ensure required ports are allowed: ${ports[*]}/tcp"

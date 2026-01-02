@@ -7,7 +7,7 @@ Last verified: 2026-01-02
 - Preflight: `bash script/ops/chatwoot_preflight.sh --env-file .env` (OK)
   - WARN: `CW_IMAGE_TAG` not pinned (effective tag: `latest`)
   - WARN: `CADDY_DOMAIN` unset (defaults to `localhost`, internal CA)
-  - NOTE: `ufw` status may require sudo; ensure required ports are allowed (especially `80/443` when using Caddy)
+  - NOTE: `ufw` status may require sudo (preflight won't prompt); ensure required ports are allowed (especially `80/443` when using Caddy)
 - Preflight (strict production): `bash script/ops/chatwoot_preflight.sh --env-file .env --strict-production` (FAIL)
   - FAIL: `CW_IMAGE_TAG` not pinned (effective tag: `latest`)
   - FAIL: `CADDY_DOMAIN` missing/empty while Caddy overlay is enabled
