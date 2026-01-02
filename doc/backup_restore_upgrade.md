@@ -123,7 +123,7 @@ docker compose -f docker-compose.production.yaml up -d
 ```
 
 PASS nếu Web UI truy cập được:
-- `curl -fsS -o /dev/null -w '%{http_code}\\n' "http://127.0.0.1:${CW_WEB_PORT:-3003}/"`
+- `curl -fsS -o /dev/null -w '%{http_code}\\n' "http://127.0.0.1:${CW_WEB_PORT:-6000}/"`
 - Ghi chú: nếu bạn override `CW_WEB_PORT`, hãy `export CW_WEB_PORT=...` hoặc thay port trực tiếp trong URL.
 
 ## 3) Upgrade (nâng cấp)

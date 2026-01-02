@@ -15,7 +15,7 @@ services:
       migrate:
         condition: service_completed_successfully
     ports:
-      - '127.0.0.1:${CW_WEB_PORT:-3003}:3000'
+      - '127.0.0.1:${CW_WEB_PORT:-6000}:3000'
     environment:
       - NODE_ENV=production
       - RAILS_ENV=production
@@ -78,7 +78,7 @@ services:
     image: pgvector/pgvector:pg16
     restart: always
     ports:
-      - '127.0.0.1:${CW_POSTGRES_PORT:-5433}:5432'
+      - '127.0.0.1:${CW_POSTGRES_PORT:-2716}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:

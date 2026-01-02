@@ -40,8 +40,8 @@ Script `chatwoot_preflight.sh` sẽ cảnh báo nếu thấp.
 ### 1.3 Port & firewall
 
 Mặc định (không reverse proxy), stack bind vào localhost:
-- Web: `127.0.0.1:${CW_WEB_PORT:-3003}`
-- Postgres: `127.0.0.1:${CW_POSTGRES_PORT:-5433}`
+- Web: `127.0.0.1:${CW_WEB_PORT:-6000}`
+- Postgres: `127.0.0.1:${CW_POSTGRES_PORT:-2716}`
 - Redis: `127.0.0.1:${CW_REDIS_PORT:-6379}`
 
 **Production có domain/public access:** dùng Caddy overlay (`docker-compose.caddy.yaml`) để mở `80/443`.
@@ -144,7 +144,7 @@ bash script/ops/chatwoot_smoketest.sh --env-file .env.production
 ### 5.2 Kiểm chứng thủ công (UI)
 
 1) Mở Web UI:
-- Nếu không dùng Caddy: `http://127.0.0.1:${CW_WEB_PORT:-3003}`
+- Nếu không dùng Caddy: `http://127.0.0.1:${CW_WEB_PORT:-6000}`
 - Nếu dùng Caddy: `https://$CADDY_DOMAIN`
 
 2) Tạo admin, tạo inbox, gửi thử tin nhắn.
@@ -200,7 +200,7 @@ script/ops/chatwoot_compose.sh --env-file .env.production logs --tail=300 migrat
 - Nếu stack bind vào `127.0.0.1`, bạn chỉ truy cập được trên VPS.
 - Cách an toàn: bật Caddy overlay (80/443) hoặc dùng SSH tunnel:
   ```bash
-  ssh -L 3003:127.0.0.1:3003 user@your-vps
+  ssh -L 6000:127.0.0.1:6000 user@your-vps
   ```
 - Nếu dùng firewall/security group: allow port 80/443 (Caddy) hoặc port bạn expose.
 

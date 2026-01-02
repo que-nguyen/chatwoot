@@ -12,18 +12,18 @@ Tài liệu này là runbook triển khai Chatwoot bằng `docker-compose.produc
 
 ### Port không xung đột
 Mặc định stack sẽ dùng các host port (bind vào `127.0.0.1`):
-- Web: `3003`
-- Postgres: `5433`
+- Web: `6000`
+- Postgres: `2716`
 - Redis: `6379`
 
 PASS nếu không có service khác đang chiếm các port này.
 
 Lệnh kiểm tra:
-- `ss -ltn | grep -E ":(3003|5433|6379)([^0-9]|$)" || true`
+- `ss -ltn | grep -E ":(6000|2716|6379)([^0-9]|$)" || true`
 
 Nếu xung đột port, dùng các biến override sau (không cần sửa file YAML):
-- `CW_WEB_PORT` (mặc định `3003`)
-- `CW_POSTGRES_PORT` (mặc định `5433`)
+- `CW_WEB_PORT` (mặc định `6000`)
+- `CW_POSTGRES_PORT` (mặc định `2716`)
 - `CW_REDIS_PORT` (mặc định `6379`)
 
 Ví dụ:
@@ -86,7 +86,7 @@ Ghi chú quan trọng: `CW_ENV_FILE` ảnh hưởng `env_file:` (env vars đi v�
   - Gợi ý:
     - `openssl rand -hex 64`
 - `FRONTEND_URL`
-  - Local: `http://127.0.0.1:${CW_WEB_PORT:-3003}`
+  - Local: `http://127.0.0.1:${CW_WEB_PORT:-6000}`
   - Production: URL public (thường là `https://chatwoot.your-domain.tld`)
 - `POSTGRES_HOST=postgres`
 - `POSTGRES_USERNAME` (phải khớp với user tạo trong container Postgres; mặc định `postgres`)
@@ -105,7 +105,7 @@ Ghi chú quan trọng: `CW_ENV_FILE` ảnh hưởng `env_file:` (env vars đi v�
 
 ### Start
 Chạy (thêm override port nếu cần):
-- `CW_WEB_PORT=3003 docker compose -f docker-compose.production.yaml up -d`
+- `CW_WEB_PORT=6000 docker compose -f docker-compose.production.yaml up -d`
 
 Nếu compose báo `Found orphan containers (...)`:
 - Nghĩa là trước đó bạn đã chạy stack với overlay compose khác (ví dụ Caddy/Zalo adapter) nhưng lệnh hiện tại không include các file đó.
@@ -131,11 +131,11 @@ Tuỳ chọn (chạy nhanh, tái lập được): smoke-test service health + We
 
 ### 3.1 Web UI truy cập được
 - PASS nếu HTTP trả về `200` hoặc `302`:
-  - `curl -fsS -o /dev/null -w '%{http_code}\\n' "http://127.0.0.1:${CW_WEB_PORT:-3003}/"`
+  - `curl -fsS -o /dev/null -w '%{http_code}\\n' "http://127.0.0.1:${CW_WEB_PORT:-6000}/"`
 
 ### 3.2 Tạo admin (qua UI)
 - PASS nếu truy cập được:
-  - `http://127.0.0.1:${CW_WEB_PORT:-3003}/installation/onboarding`
+  - `http://127.0.0.1:${CW_WEB_PORT:-6000}/installation/onboarding`
 - Tạo admin theo form onboarding.
 
 Tuỳ chọn (headless, để smoke-test DB): tạo SuperAdmin bằng rails runner (không in password ra log):
