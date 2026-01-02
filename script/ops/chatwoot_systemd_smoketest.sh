@@ -13,6 +13,7 @@ Runs a minimal Phase 4 smoke test for systemd timers:
 - chatwoot-healthcheck.timer enabled + active
 
 Options:
+  --user                  Check user-scope timers (systemctl --user)
   --backup-only            Check only chatwoot-backup.timer
   --healthcheck-only       Check only chatwoot-healthcheck.timer
   -h, --help               Show help
@@ -25,9 +26,14 @@ EOF
 
 check_backup=1
 check_healthcheck=1
+systemd_scope="system"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --user)
+      systemd_scope="user"
+      shift
+      ;;
     --backup-only)
       check_backup=1
       check_healthcheck=0
@@ -52,6 +58,11 @@ done
 
 failed=0
 
+systemctl_cmd=(systemctl)
+if [[ "$systemd_scope" == "user" ]]; then
+  systemctl_cmd=(systemctl --user)
+fi
+
 check_pass() {
   local message="$1"
   echo "PASS $message"
@@ -68,19 +79,25 @@ echo "== Chatwoot systemd smoketest =="
 if ! command -v systemctl >/dev/null 2>&1; then
   check_fail "systemctl not found (systemd is required on the target host)"
 else
+  if [[ "$systemd_scope" == "user" ]]; then
+    if ! "${systemctl_cmd[@]}" show-environment >/dev/null 2>&1; then
+      check_fail "systemctl --user failed (no user systemd session)"
+    fi
+  fi
+
   timers=()
   [[ "$check_backup" -eq 1 ]] && timers+=(chatwoot-backup.timer)
   [[ "$check_healthcheck" -eq 1 ]] && timers+=(chatwoot-healthcheck.timer)
 
   for timer in "${timers[@]}"; do
-    enabled_state="$(systemctl is-enabled "$timer" 2>&1 || true)"
+    enabled_state="$("${systemctl_cmd[@]}" is-enabled "$timer" 2>&1 || true)"
     if [[ "$enabled_state" == "enabled" ]]; then
       check_pass "$timer enabled"
     else
       check_fail "$timer not enabled (state: ${enabled_state:-unknown})"
     fi
 
-    active_state="$(systemctl is-active "$timer" 2>&1 || true)"
+    active_state="$("${systemctl_cmd[@]}" is-active "$timer" 2>&1 || true)"
     if [[ "$active_state" == "active" ]]; then
       check_pass "$timer active"
     else
@@ -90,7 +107,7 @@ else
 
   echo
   echo "== Timers (systemctl list-timers) =="
-  systemctl list-timers --all --no-pager | grep -E 'chatwoot-(backup|healthcheck)\\.timer' || true
+  "${systemctl_cmd[@]}" list-timers --all --no-pager | grep -E 'chatwoot-(backup|healthcheck)\.timer' || true
 fi
 
 if [[ "$failed" -ne 0 ]]; then
@@ -98,4 +115,3 @@ if [[ "$failed" -ne 0 ]]; then
 fi
 
 echo "Smoketest OK"
-

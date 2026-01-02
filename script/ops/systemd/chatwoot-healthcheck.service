@@ -6,4 +6,5 @@ After=network-online.target
 [Service]
 Type=oneshot
 EnvironmentFile=-/etc/chatwoot/ops.env
-ExecStart=/usr/bin/env bash -c 'set -euo pipefail; if [[ -z "${CHATWOOT_ROOT:-}" ]]; then echo "CHATWOOT_ROOT is required (set it in /etc/chatwoot/ops.env)" >&2; exit 2; fi; exec "${CHATWOOT_ROOT}/script/ops/chatwoot_healthcheck.sh"'
+EnvironmentFile=-%h/.config/chatwoot/ops.env
+ExecStart=/usr/bin/env bash -c 'set -euo pipefail; if [[ -z "${CHATWOOT_ROOT:-}" ]]; then echo "CHATWOOT_ROOT is required (set it in /etc/chatwoot/ops.env or ~/.config/chatwoot/ops.env)" >&2; exit 2; fi; exec "${CHATWOOT_ROOT}/script/ops/chatwoot_healthcheck.sh"'

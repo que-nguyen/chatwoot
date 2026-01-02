@@ -13,6 +13,8 @@ Last verified: 2026-01-02
 - Backup: `bash script/ops/chatwoot_backup.sh` (OK)
 - Phase 3 restore rehearsal: `bash script/ops/chatwoot_restore.sh --yes --pgdump backup/pgdump-2026-01-02-114815.sql.gz --storage backup/storage-2026-01-02-114815.tgz` (OK)
 - Phase 3 upgrade rehearsal: `bash script/ops/chatwoot_upgrade.sh --tag latest` (OK)
+- Phase 4 systemd install (user): `bash script/ops/chatwoot_systemd_install.sh --user` (OK)
+- Phase 4 systemd smoketest (user): `bash script/ops/chatwoot_systemd_smoketest.sh --user` (OK)
 
 ## Host port mapping (observed)
 
@@ -24,4 +26,4 @@ Last verified: 2026-01-02
 
 ## Next
 
-- Phase 4: install/enable systemd timers on target VPS (`bash script/ops/chatwoot_systemd_install.sh` + `bash script/ops/chatwoot_systemd_smoketest.sh`)
+- Phase 4 (VPS): install/enable system-scope systemd timers (requires root/sudo): `bash script/ops/chatwoot_systemd_install.sh` + `bash script/ops/chatwoot_systemd_smoketest.sh`

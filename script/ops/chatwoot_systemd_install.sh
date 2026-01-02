@@ -13,11 +13,12 @@ Install and enable systemd timers for Chatwoot ops scripts:
 - chatwoot-healthcheck.timer (periodic healthcheck + optional webhook alert)
 
 This script:
-1) Installs unit files into /etc/systemd/system/
-2) Creates /etc/chatwoot/ops.env (only if missing, unless --overwrite-env)
+1) Installs unit files into /etc/systemd/system/ (or ~/.config/systemd/user/ with --user)
+2) Creates /etc/chatwoot/ops.env (or ~/.config/chatwoot/ops.env with --user; only if missing unless --overwrite-env)
 3) (Optional) Enables timers
 
 Options:
+  --user                  Install user-scope timers (no sudo; requires a user systemd session)
   --env-file PATH          Env file used by ops scripts (default: <repo>/.env)
   --compose-files "FILES"  Space-separated compose files (default: CW_COMPOSE_FILES from env file or docker-compose.production.yaml)
   --backup-dir PATH        Backup dir (default: backup)
@@ -28,13 +29,14 @@ Options:
   --backup-only            Install/enable only backup timer
   --healthcheck-only       Install/enable only healthcheck timer
   --no-enable              Install units but do not enable timers
-  --overwrite-env          Overwrite /etc/chatwoot/ops.env (may overwrite webhook config)
+  --overwrite-env          Overwrite ops env file (may overwrite webhook config)
   --dry-run                Print actions only
   -h, --help               Show help
 
 Examples:
   bash script/ops/chatwoot_systemd_install.sh
   bash script/ops/chatwoot_systemd_install.sh --compose-files "docker-compose.production.yaml docker-compose.caddy.yaml"
+  bash script/ops/chatwoot_systemd_install.sh --user
   bash script/ops/chatwoot_systemd_install.sh --alert-webhook-mode discord --alert-webhook-url "https://..." --alert-prefix "chatwoot-prod"
 EOF
 }
@@ -42,6 +44,7 @@ EOF
 dry_run=0
 enable_timers=1
 overwrite_env=0
+systemd_scope="system"
 
 install_backup=1
 install_healthcheck=1
@@ -56,6 +59,10 @@ alert_prefix=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --user)
+      systemd_scope="user"
+      shift
+      ;;
     --env-file)
       env_file="${2:-}"
       shift 2
@@ -126,8 +133,29 @@ run() {
   "$@"
 }
 
+systemctl_cmd=(systemctl)
+repo_root="$ROOT_DIR"
+ops_env_path="/etc/chatwoot/ops.env"
+systemd_unit_dir="/etc/systemd/system"
+
+if [[ "$systemd_scope" == "user" ]]; then
+  config_root="${XDG_CONFIG_HOME:-}"
+  if [[ -z "$config_root" ]]; then
+    home_dir="${HOME:-}"
+    if [[ -z "$home_dir" ]]; then
+      echo "ERROR: HOME is not set; cannot resolve user config directory for --user" >&2
+      exit 2
+    fi
+    config_root="$home_dir/.config"
+  fi
+
+  ops_env_path="$config_root/chatwoot/ops.env"
+  systemd_unit_dir="$config_root/systemd/user"
+  systemctl_cmd=(systemctl --user)
+fi
+
 sudo_cmd=()
-if [[ "$(id -u)" -ne 0 ]]; then
+if [[ "$systemd_scope" == "system" && "$(id -u)" -ne 0 ]]; then
   if command -v sudo >/dev/null 2>&1; then
     sudo_cmd=(sudo)
   else
@@ -138,6 +166,14 @@ if [[ "$(id -u)" -ne 0 ]]; then
       echo "ERROR: must run as root (or install sudo)" >&2
       exit 2
     fi
+  fi
+
+  if [[ "$dry_run" -eq 0 && ! -t 0 ]]; then
+    if ! sudo -n true >/dev/null 2>&1; then
+      echo "ERROR: sudo requires a password and stdin is not a TTY. Re-run as root, configure passwordless sudo, or use --user." >&2
+      exit 2
+    fi
+    sudo_cmd=(sudo -n)
   fi
 fi
 
@@ -169,10 +205,6 @@ read_env_value_from_file() {
   printf "%s" "$value"
 }
 
-repo_root="$ROOT_DIR"
-ops_env_path="/etc/chatwoot/ops.env"
-systemd_unit_dir="/etc/systemd/system"
-
 if [[ -z "$env_file" ]]; then
   env_file="${CW_ENV_FILE:-$repo_root/.env}"
 fi
@@ -203,6 +235,13 @@ if ! command -v systemctl >/dev/null 2>&1; then
   fi
 fi
 
+if [[ "$systemd_scope" == "user" && "$dry_run" -eq 0 ]]; then
+  if ! "${systemctl_cmd[@]}" show-environment >/dev/null 2>&1; then
+    echo "ERROR: systemctl --user failed (no user systemd session). Try a full login session or use system-scope install (requires root/sudo)." >&2
+    exit 2
+  fi
+fi
+
 units_dir="$repo_root/script/ops/systemd"
 if [[ ! -d "$units_dir" ]]; then
   echo "ERROR: systemd units directory not found: $units_dir" >&2
@@ -219,7 +258,15 @@ if [[ "$install_healthcheck" -eq 1 ]]; then
   run "${sudo_cmd[@]}" install -D -m 0644 "$units_dir/chatwoot-healthcheck.timer" "$systemd_unit_dir/chatwoot-healthcheck.timer"
 fi
 
-run "${sudo_cmd[@]}" install -d -m 0750 "$(dirname "$ops_env_path")"
+ops_env_dir="$(dirname "$ops_env_path")"
+ops_env_dir_mode="0750"
+ops_env_file_mode="0640"
+if [[ "$systemd_scope" == "user" ]]; then
+  ops_env_dir_mode="0700"
+  ops_env_file_mode="0600"
+fi
+
+run "${sudo_cmd[@]}" install -d -m "$ops_env_dir_mode" "$ops_env_dir"
 
 if [[ -f "$ops_env_path" && "$overwrite_env" -eq 0 ]]; then
   echo "INFO: ops env file already exists; leaving unchanged: $ops_env_path" >&2
@@ -249,7 +296,7 @@ EOF
     printf "# CW_ALERT_WEBHOOK_URL=https://...\n" >>"$tmp"
   fi
 
-  run "${sudo_cmd[@]}" install -m 0640 "$tmp" "$ops_env_path"
+  run "${sudo_cmd[@]}" install -m "$ops_env_file_mode" "$tmp" "$ops_env_path"
   rm -f "$tmp"
   if [[ "$dry_run" -eq 1 ]]; then
     if [[ -f "$ops_env_path" ]]; then
@@ -262,7 +309,7 @@ EOF
   fi
 fi
 
-run "${sudo_cmd[@]}" systemctl daemon-reload
+run "${sudo_cmd[@]}" "${systemctl_cmd[@]}" daemon-reload
 
 if [[ "$enable_timers" -eq 1 ]]; then
   timers=()
@@ -270,8 +317,8 @@ if [[ "$enable_timers" -eq 1 ]]; then
   [[ "$install_healthcheck" -eq 1 ]] && timers+=(chatwoot-healthcheck.timer)
 
   if [[ "${#timers[@]}" -gt 0 ]]; then
-    run "${sudo_cmd[@]}" systemctl enable --now "${timers[@]}"
-    run systemctl list-timers --all | grep -E 'chatwoot-(backup|healthcheck)' || true
+    run "${sudo_cmd[@]}" "${systemctl_cmd[@]}" enable --now "${timers[@]}"
+    run "${systemctl_cmd[@]}" list-timers --all | grep -E 'chatwoot-(backup|healthcheck)' || true
   fi
 else
   echo "INFO: timers not enabled (--no-enable)" >&2
