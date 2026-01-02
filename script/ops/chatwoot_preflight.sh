@@ -6,7 +6,7 @@ cd "$ROOT_DIR"
 
 usage() {
   cat <<'EOF'
-Usage: bash script/ops/chatwoot_preflight.sh [--env-file PATH]
+Usage: bash script/ops/chatwoot_preflight.sh [--env-file PATH] [--apply-env-updates]
 
 Preflight checks for Chatwoot Docker Compose runbooks:
 - Docker + Docker Compose availability
@@ -17,15 +17,25 @@ Preflight checks for Chatwoot Docker Compose runbooks:
   - Zalo adapter: ZALO_ADAPTER_HOST_PORT and ZALO_ADAPTER_ENV_FILE presence
 
 The env file defaults to CW_ENV_FILE or .env.
+
+Options:
+  --apply-env-updates  If the stack is already running with different host ports,
+                      write safe port variables (CW_*_PORT, ZALO_ADAPTER_HOST_PORT)
+                      into the env file to match the running stack.
 EOF
 }
 
 env_file="${CW_ENV_FILE:-.env}"
+apply_env_updates=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -e|--env-file)
       env_file="${2:-}"
       shift 2
+      ;;
+    --apply-env-updates)
+      apply_env_updates=1
+      shift
       ;;
     -h|--help)
       usage
@@ -100,6 +110,51 @@ check_fail() {
 check_warn() {
   local message="$1"
   echo "WARN $message" >&2
+}
+
+apply_env_updates_to_file() {
+  local file="$1"
+  shift
+  local updates=("$@")
+
+  if [[ "${#updates[@]}" -eq 0 ]]; then
+    return 0
+  fi
+
+  local env_dir=""
+  env_dir="$(dirname "$file")"
+  if [[ ! -d "$env_dir" ]]; then
+    check_fail "env directory does not exist: $env_dir"
+    return 1
+  fi
+
+  local env_base=""
+  env_base="$(basename "$file")"
+  local tmp=""
+  tmp="$(mktemp -p "$env_dir" ".${env_base}.tmp.XXXXXX")"
+
+  local keys=()
+  local update=""
+  for update in "${updates[@]}"; do
+    keys+=("${update%%=*}")
+  done
+
+  local pattern=""
+  pattern="^[[:space:]]*($(IFS='|'; printf "%s" "${keys[*]}"))[[:space:]]*="
+
+  if [[ -f "$file" ]]; then
+    grep -Ev "$pattern" "$file" >"$tmp" || true
+    chmod --reference="$file" "$tmp" || true
+  else
+    : >"$tmp"
+  fi
+
+  printf "\n" >>"$tmp" || true
+  for update in "${updates[@]}"; do
+    printf "%s\n" "$update" >>"$tmp"
+  done
+
+  mv "$tmp" "$file"
 }
 
 compose_files=()
@@ -269,15 +324,30 @@ running_postgres_port="$(resolve_running_host_port postgres 5432 || true)"
 running_redis_port="$(resolve_running_host_port redis 6379 || true)"
 
 if [[ -n "$running_web_port" && "$web_port" =~ ^[0-9]+$ && "$web_port" != "$running_web_port" ]]; then
-  check_fail "CW_WEB_PORT=$web_port does not match the running stack (rails=$running_web_port); set CW_WEB_PORT=$running_web_port to avoid accidental recreate/port conflicts"
+  if [[ "$apply_env_updates" -eq 1 ]]; then
+    check_warn "CW_WEB_PORT=$web_port does not match the running stack (rails=$running_web_port); will set CW_WEB_PORT=$running_web_port"
+    web_port="$running_web_port"
+  else
+    check_fail "CW_WEB_PORT=$web_port does not match the running stack (rails=$running_web_port); set CW_WEB_PORT=$running_web_port to avoid accidental recreate/port conflicts"
+  fi
   suggested_env_updates+=("CW_WEB_PORT=$running_web_port")
 fi
 if [[ -n "$running_postgres_port" && "$postgres_port" =~ ^[0-9]+$ && "$postgres_port" != "$running_postgres_port" ]]; then
-  check_fail "CW_POSTGRES_PORT=$postgres_port does not match the running stack (postgres=$running_postgres_port); set CW_POSTGRES_PORT=$running_postgres_port to avoid accidental recreate/port conflicts"
+  if [[ "$apply_env_updates" -eq 1 ]]; then
+    check_warn "CW_POSTGRES_PORT=$postgres_port does not match the running stack (postgres=$running_postgres_port); will set CW_POSTGRES_PORT=$running_postgres_port"
+    postgres_port="$running_postgres_port"
+  else
+    check_fail "CW_POSTGRES_PORT=$postgres_port does not match the running stack (postgres=$running_postgres_port); set CW_POSTGRES_PORT=$running_postgres_port to avoid accidental recreate/port conflicts"
+  fi
   suggested_env_updates+=("CW_POSTGRES_PORT=$running_postgres_port")
 fi
 if [[ -n "$running_redis_port" && "$redis_port" =~ ^[0-9]+$ && "$redis_port" != "$running_redis_port" ]]; then
-  check_fail "CW_REDIS_PORT=$redis_port does not match the running stack (redis=$running_redis_port); set CW_REDIS_PORT=$running_redis_port to avoid accidental recreate/port conflicts"
+  if [[ "$apply_env_updates" -eq 1 ]]; then
+    check_warn "CW_REDIS_PORT=$redis_port does not match the running stack (redis=$running_redis_port); will set CW_REDIS_PORT=$running_redis_port"
+    redis_port="$running_redis_port"
+  else
+    check_fail "CW_REDIS_PORT=$redis_port does not match the running stack (redis=$running_redis_port); set CW_REDIS_PORT=$running_redis_port to avoid accidental recreate/port conflicts"
+  fi
   suggested_env_updates+=("CW_REDIS_PORT=$running_redis_port")
 fi
 
@@ -293,11 +363,21 @@ if [[ "$use_caddy" -eq 1 ]]; then
   running_caddy_https_port="$(resolve_running_host_port caddy 443 || true)"
 
   if [[ -n "$running_caddy_http_port" && "$caddy_http_port" =~ ^[0-9]+$ && "$caddy_http_port" != "$running_caddy_http_port" ]]; then
-    check_fail "CW_CADDY_HTTP_PORT=$caddy_http_port does not match the running stack (caddy=$running_caddy_http_port); set CW_CADDY_HTTP_PORT=$running_caddy_http_port to avoid accidental recreate/port conflicts"
+    if [[ "$apply_env_updates" -eq 1 ]]; then
+      check_warn "CW_CADDY_HTTP_PORT=$caddy_http_port does not match the running stack (caddy=$running_caddy_http_port); will set CW_CADDY_HTTP_PORT=$running_caddy_http_port"
+      caddy_http_port="$running_caddy_http_port"
+    else
+      check_fail "CW_CADDY_HTTP_PORT=$caddy_http_port does not match the running stack (caddy=$running_caddy_http_port); set CW_CADDY_HTTP_PORT=$running_caddy_http_port to avoid accidental recreate/port conflicts"
+    fi
     suggested_env_updates+=("CW_CADDY_HTTP_PORT=$running_caddy_http_port")
   fi
   if [[ -n "$running_caddy_https_port" && "$caddy_https_port" =~ ^[0-9]+$ && "$caddy_https_port" != "$running_caddy_https_port" ]]; then
-    check_fail "CW_CADDY_HTTPS_PORT=$caddy_https_port does not match the running stack (caddy=$running_caddy_https_port); set CW_CADDY_HTTPS_PORT=$running_caddy_https_port to avoid accidental recreate/port conflicts"
+    if [[ "$apply_env_updates" -eq 1 ]]; then
+      check_warn "CW_CADDY_HTTPS_PORT=$caddy_https_port does not match the running stack (caddy=$running_caddy_https_port); will set CW_CADDY_HTTPS_PORT=$running_caddy_https_port"
+      caddy_https_port="$running_caddy_https_port"
+    else
+      check_fail "CW_CADDY_HTTPS_PORT=$caddy_https_port does not match the running stack (caddy=$running_caddy_https_port); set CW_CADDY_HTTPS_PORT=$running_caddy_https_port to avoid accidental recreate/port conflicts"
+    fi
     suggested_env_updates+=("CW_CADDY_HTTPS_PORT=$running_caddy_https_port")
   fi
 
@@ -310,7 +390,12 @@ if [[ "$use_zalo_adapter" -eq 1 ]]; then
   running_zalo_port="$(resolve_running_host_port zalo_adapter 3001 || true)"
 
   if [[ -n "$running_zalo_port" && "$zalo_host_port" =~ ^[0-9]+$ && "$zalo_host_port" != "$running_zalo_port" ]]; then
-    check_fail "ZALO_ADAPTER_HOST_PORT=$zalo_host_port does not match the running stack (zalo_adapter=$running_zalo_port); set ZALO_ADAPTER_HOST_PORT=$running_zalo_port to avoid accidental recreate/port conflicts"
+    if [[ "$apply_env_updates" -eq 1 ]]; then
+      check_warn "ZALO_ADAPTER_HOST_PORT=$zalo_host_port does not match the running stack (zalo_adapter=$running_zalo_port); will set ZALO_ADAPTER_HOST_PORT=$running_zalo_port"
+      zalo_host_port="$running_zalo_port"
+    else
+      check_fail "ZALO_ADAPTER_HOST_PORT=$zalo_host_port does not match the running stack (zalo_adapter=$running_zalo_port); set ZALO_ADAPTER_HOST_PORT=$running_zalo_port to avoid accidental recreate/port conflicts"
+    fi
     suggested_env_updates+=("ZALO_ADAPTER_HOST_PORT=$running_zalo_port")
   fi
 
@@ -335,6 +420,14 @@ if [[ "${#suggested_env_updates[@]}" -gt 0 ]]; then
   for line in "${suggested_env_updates[@]}"; do
     echo "  $line"
   done
+  if [[ "$apply_env_updates" -eq 1 ]]; then
+    if [[ -f "$env_file" ]]; then
+      apply_env_updates_to_file "$env_file" "${suggested_env_updates[@]}"
+      check_pass "Applied env updates to $env_file"
+    else
+      check_fail "Cannot apply env updates because env file not found: $env_file"
+    fi
+  fi
 fi
 
 if [[ "$failed" -ne 0 ]]; then
