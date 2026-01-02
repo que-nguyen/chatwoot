@@ -12,6 +12,9 @@ Preflight checks for Chatwoot Docker Compose runbooks:
 - Docker + Docker Compose availability
 - Required secrets in env file (SECRET_KEY_BASE, POSTGRES_PASSWORD, REDIS_PASSWORD)
 - Local port conflicts for CW_WEB_PORT/CW_POSTGRES_PORT/CW_REDIS_PORT
+- Optional overlay checks (when CW_COMPOSE_FILES includes overlay YAMLs):
+  - Caddy: CW_CADDY_HTTP_PORT/CW_CADDY_HTTPS_PORT
+  - Zalo adapter: ZALO_ADAPTER_HOST_PORT and ZALO_ADAPTER_ENV_FILE presence
 
 The env file defaults to CW_ENV_FILE or .env.
 EOF
@@ -98,6 +101,29 @@ check_warn() {
   echo "WARN $message" >&2
 }
 
+compose_files=()
+compose_files_value="$(get_effective_value CW_COMPOSE_FILES "")"
+if [[ -n "$compose_files_value" ]]; then
+  # shellcheck disable=SC2206
+  compose_files=($compose_files_value)
+else
+  compose_files=(docker-compose.production.yaml)
+fi
+
+use_zalo_adapter=0
+use_caddy=0
+for file in "${compose_files[@]}"; do
+  if [[ ! -f "$file" ]]; then
+    check_fail "compose file not found: $file (CW_COMPOSE_FILES='${compose_files_value:-}' )"
+    continue
+  fi
+
+  case "$file" in
+    *docker-compose.zalo-adapter.yaml) use_zalo_adapter=1 ;;
+    *docker-compose.caddy.yaml) use_caddy=1 ;;
+  esac
+done
+
 echo "== Chatwoot preflight =="
 
 if command -v docker >/dev/null 2>&1; then
@@ -181,6 +207,25 @@ redis_port="$(get_effective_value CW_REDIS_PORT "6379")"
 check_port_free "$web_port" "CW_WEB_PORT"
 check_port_free "$postgres_port" "CW_POSTGRES_PORT"
 check_port_free "$redis_port" "CW_REDIS_PORT"
+
+if [[ "$use_caddy" -eq 1 ]]; then
+  caddy_http_port="$(get_effective_value CW_CADDY_HTTP_PORT "80")"
+  caddy_https_port="$(get_effective_value CW_CADDY_HTTPS_PORT "443")"
+  check_port_free "$caddy_http_port" "CW_CADDY_HTTP_PORT"
+  check_port_free "$caddy_https_port" "CW_CADDY_HTTPS_PORT"
+fi
+
+if [[ "$use_zalo_adapter" -eq 1 ]]; then
+  zalo_host_port="$(get_effective_value ZALO_ADAPTER_HOST_PORT "3002")"
+  check_port_free "$zalo_host_port" "ZALO_ADAPTER_HOST_PORT"
+
+  zalo_env_file="$(get_effective_value ZALO_ADAPTER_ENV_FILE "./integrations/zalo_adapter/.env")"
+  if [[ -f "$zalo_env_file" ]]; then
+    check_pass "Zalo adapter env file found: $zalo_env_file"
+  else
+    check_fail "Zalo adapter env file not found: $zalo_env_file (set ZALO_ADAPTER_ENV_FILE or create the default file)"
+  fi
+fi
 
 caddy_domain="$(get_effective_value CADDY_DOMAIN "")"
 if [[ -n "$caddy_domain" && "$caddy_domain" == *"://"* ]]; then
