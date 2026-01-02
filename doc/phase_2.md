@@ -64,6 +64,11 @@ docker compose \
 
 ## 3) Checkpoint kiểm chứng chạy thành công
 
+Tuỳ chọn (chạy nhanh, tái lập được): smoke-test Phase 2 (Caddy reverse proxy + TLS):
+- `bash script/ops/chatwoot_caddy_smoketest.sh`
+
+PASS nếu script in `Smoketest OK` (exit code `0`).
+
 ### 3.1 HTTP/HTTPS trả về từ reverse proxy
 - PASS nếu HTTP trả `200/302` (tuỳ cấu hình redirect):
   - `curl -fsS -o /dev/null -w '%{http_code}\\n' "http://chatwoot.example.com/"`
