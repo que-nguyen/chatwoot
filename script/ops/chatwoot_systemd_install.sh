@@ -133,6 +133,11 @@ run() {
   "$@"
 }
 
+do_systemctl=1
+if [[ "$dry_run" -eq 1 || "$enable_timers" -eq 0 ]]; then
+  do_systemctl=0
+fi
+
 systemctl_cmd=(systemctl)
 repo_root="$ROOT_DIR"
 ops_env_path="/etc/chatwoot/ops.env"
@@ -226,20 +231,20 @@ backup_keep_days="${backup_keep_days:-14}"
 alert_webhook_mode="${alert_webhook_mode:-slack}"
 alert_prefix="${alert_prefix:-chatwoot}"
 
-if ! command -v systemctl >/dev/null 2>&1; then
-  if [[ "$dry_run" -eq 1 ]]; then
-    echo "WARN: systemctl not found; continuing due to --dry-run (this script requires systemd on the target host)" >&2
-  else
-    echo "ERROR: systemctl not found; systemd is required to use these timers" >&2
+if [[ "$do_systemctl" -eq 1 ]]; then
+  if ! command -v systemctl >/dev/null 2>&1; then
+    echo "ERROR: systemctl not found; systemd is required to enable these timers (use --no-enable to install files only)" >&2
     exit 2
   fi
-fi
 
-if [[ "$systemd_scope" == "user" && "$dry_run" -eq 0 ]]; then
-  if ! "${systemctl_cmd[@]}" show-environment >/dev/null 2>&1; then
-    echo "ERROR: systemctl --user failed (no user systemd session). Try a full login session or use system-scope install (requires root/sudo)." >&2
-    exit 2
+  if [[ "$systemd_scope" == "user" ]]; then
+    if ! "${systemctl_cmd[@]}" show-environment >/dev/null 2>&1; then
+      echo "ERROR: systemctl --user failed (no user systemd session). Try a full login session or use system-scope install (requires root/sudo). You can also re-run with --no-enable to install files only." >&2
+      exit 2
+    fi
   fi
+elif [[ "$dry_run" -eq 1 ]] && ! command -v systemctl >/dev/null 2>&1; then
+  echo "WARN: systemctl not found; continuing due to --dry-run (this script requires systemd on the target host)" >&2
 fi
 
 units_dir="$repo_root/script/ops/systemd"
@@ -309,7 +314,9 @@ EOF
   fi
 fi
 
-run "${sudo_cmd[@]}" "${systemctl_cmd[@]}" daemon-reload
+if [[ "$do_systemctl" -eq 1 ]]; then
+  run "${sudo_cmd[@]}" "${systemctl_cmd[@]}" daemon-reload
+fi
 
 if [[ "$enable_timers" -eq 1 ]]; then
   timers=()
@@ -321,5 +328,12 @@ if [[ "$enable_timers" -eq 1 ]]; then
     run "${systemctl_cmd[@]}" list-timers --all | grep -E 'chatwoot-(backup|healthcheck)' || true
   fi
 else
-  echo "INFO: timers not enabled (--no-enable)" >&2
+  echo "INFO: timers not enabled (--no-enable). Enable later with:" >&2
+  if [[ "$systemd_scope" == "user" ]]; then
+    echo "  systemctl --user daemon-reload" >&2
+    echo "  systemctl --user enable --now chatwoot-backup.timer chatwoot-healthcheck.timer" >&2
+  else
+    echo "  sudo systemctl daemon-reload" >&2
+    echo "  sudo systemctl enable --now chatwoot-backup.timer chatwoot-healthcheck.timer" >&2
+  fi
 fi

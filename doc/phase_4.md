@@ -78,6 +78,10 @@ Ghi chú:
 - Nếu bạn không có sudo (local/dev), dùng `--user` để cài **user-scope** units vào `$XDG_CONFIG_HOME/systemd/user` (default: `~/.config/systemd/user`) (env file: `$XDG_CONFIG_HOME/chatwoot/ops.env`, default: `~/.config/chatwoot/ops.env`):
   - `bash script/ops/chatwoot_systemd_install.sh --user`
   - `bash script/ops/chatwoot_systemd_smoketest.sh --user`
+  - Lưu ý: user-scope timers chỉ chạy khi user systemd instance đang sống; trên server/headless nếu bạn muốn timer vẫn chạy sau khi logout, hãy dùng system-scope (khuyến nghị) hoặc bật linger (cần sudo): `sudo loginctl enable-linger $USER`.
+- Nếu môi trường của bạn chưa có user systemd session (nên `systemctl --user ...` fail), bạn vẫn có thể “cài file trước” rồi enable sau:
+  - `bash script/ops/chatwoot_systemd_install.sh --user --no-enable`
+  - Sau đó (khi đã có session): `systemctl --user daemon-reload && systemctl --user enable --now chatwoot-backup.timer chatwoot-healthcheck.timer`
 - Script sẽ tạo env file nếu chưa có (`/etc/chatwoot/ops.env` hoặc `$XDG_CONFIG_HOME/chatwoot/ops.env` (default: `~/.config/chatwoot/ops.env`) với `--user`); nếu file đã tồn tại, script sẽ không overwrite trừ khi dùng `--overwrite-env`.
 - Để chỉ cài backup timer: thêm `--backup-only`.
 
