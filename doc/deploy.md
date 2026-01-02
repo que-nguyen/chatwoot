@@ -1,4 +1,4 @@
-# Phase 0 — Triển khai Chatwoot bằng Docker Compose (prod/staging)
+# Triển khai Chatwoot bằng Docker Compose (prod/staging)
 
 Tài liệu này là runbook triển khai Chatwoot bằng `docker-compose.production.yaml` trong repo này.
 
@@ -33,7 +33,7 @@ Ghi chú: nếu bạn set các biến này theo kiểu “one-shot” (đặt tr
 - export biến vào shell (ví dụ `export CW_WEB_PORT=3001`), hoặc
 - thay trực tiếp port trong URL (ví dụ `http://127.0.0.1:3001/`).
 
-Khuyến nghị (để tái lập được và tránh quên biến khi chạy overlay Phase 1/2/3/4):
+Khuyến nghị (để tái lập được và tránh quên biến khi chạy overlays):
 - đặt `CW_WEB_PORT/CW_POSTGRES_PORT/CW_REDIS_PORT` trực tiếp trong `.env` (file này không commit) để mọi lệnh `docker compose` đều dùng cùng giá trị.
 
 ### Disk/RAM
@@ -108,7 +108,7 @@ Chạy (thêm override port nếu cần):
 - `CW_WEB_PORT=3000 docker compose -f docker-compose.production.yaml up -d`
 
 Nếu compose báo `Found orphan containers (...)`:
-- Nghĩa là trước đó bạn đã chạy stack với overlay compose khác (Phase 1/2/...) nhưng lệnh hiện tại không include các file đó.
+- Nghĩa là trước đó bạn đã chạy stack với overlay compose khác (ví dụ Caddy/Zalo adapter) nhưng lệnh hiện tại không include các file đó.
 - Fix: include đầy đủ các file overlay tương ứng trong mọi lệnh `docker compose`, hoặc cleanup orphan containers bằng:
   - `docker compose -f docker-compose.production.yaml down --remove-orphans`
 
@@ -167,7 +167,7 @@ docker compose -f docker-compose.production.yaml exec -T rails \
 ### Restart stack không mất dữ liệu
 Ghi chú:
 - Nếu bạn đang dùng port override (`CW_WEB_PORT/CW_POSTGRES_PORT/CW_REDIS_PORT`) theo kiểu one-shot, hãy `export` vào shell hoặc đặt trong `.env` trước khi chạy `down/up`, nếu không Compose có thể recreate container với port mặc định và fail do port conflict.
-- Nếu đang chạy overlay (Phase 1/2), include các file overlay tương ứng trong lệnh `down/up` để tránh orphan containers.
+- Nếu đang chạy overlays (ví dụ Caddy/Zalo adapter), include các file overlay tương ứng trong lệnh `down/up` để tránh orphan containers.
 
 1) Stop:
    - `docker compose -f docker-compose.production.yaml down`
@@ -206,6 +206,6 @@ Ghi chú:
 
 Khi thỏa các checkpoint ở mục (3) và kiểm tra persistence ở mục (4) đều PASS ⇒ **CÀI ĐẶT THÀNH CÔNG**.
 
-Nếu cần public access + TLS qua domain, xem thêm `doc/phase_2.md`.
+Nếu cần public access + TLS qua domain, xem thêm `doc/caddy_tls.md`.
 
-Refs: `docker-compose.production.yaml`, `.env.example`, `doc/phase_2.md`
+Refs: `docker-compose.production.yaml`, `.env.example`, `doc/caddy_tls.md`

@@ -1,10 +1,10 @@
-# Phase 1 — Kết nối Zalo Web ↔ Chatwoot bằng Zalo Adapter (zca-js)
+# Kết nối Zalo Web ↔ Chatwoot bằng Zalo Adapter (zca-js)
 
 Tài liệu này hướng dẫn chạy `integrations/zalo_adapter` và cấu hình Chatwoot API inbox để đồng bộ tin nhắn Zalo.
 
 ## 0) Điều kiện tiên quyết (pass/fail rõ ràng)
 
-### Phase 0 đã chạy ổn định
+### Điều kiện: Chatwoot đã chạy ổn định
 - PASS nếu các service đều `Up`:
   - `docker compose -f docker-compose.production.yaml ps`
 - PASS nếu Web UI trả `200/302`:
@@ -99,7 +99,7 @@ Health check (host):
 
 ## 4) Checkpoint kiểm chứng chạy thành công
 
-Tuỳ chọn (chạy nhanh, tái lập được): smoke-test Phase 1 (health + connectivity + webhook):
+Tuỳ chọn (chạy nhanh, tái lập được): smoke-test (health + connectivity + webhook):
 - `bash script/ops/chatwoot_zalo_smoketest.sh`
 
 PASS nếu script in `Smoketest OK` (exit code `0`).
@@ -130,8 +130,8 @@ PASS nếu:
 - adapter không log `Missing X-Chatwoot-Signature...` cho webhook Chatwoot → adapter
 
 Ghi chú:
-- Nếu bạn đang chạy thêm overlay khác (Phase 2 Caddy), include thêm file đó khi `up/pull/logs` để tránh orphan containers.
-- Nếu bạn đang override `CW_WEB_PORT/CW_POSTGRES_PORT/CW_REDIS_PORT`, hãy `export` hoặc set trong `.env` trước khi chạy lại `docker compose up -d` để tránh port conflict (xem `doc/phase_0.md`).
+- Nếu bạn đang chạy thêm overlay khác (Caddy), include thêm file đó khi `up/pull/logs` để tránh orphan containers.
+- Nếu bạn đang override `CW_WEB_PORT/CW_POSTGRES_PORT/CW_REDIS_PORT`, hãy `export` hoặc set trong `.env` trước khi chạy lại `docker compose up -d` để tránh port conflict (xem `doc/deploy.md`).
 
 ### 4.3 Zalo → Chatwoot (incoming)
 - PASS nếu có message mới trên Zalo và thấy conversation/message xuất hiện trong Chatwoot API inbox.
@@ -158,4 +158,4 @@ Ghi chú:
 
 Khi checkpoint (4.1) + (4.2) PASS, và (4.3) PASS khi có Zalo session hợp lệ ⇒ **KẾT NỐI THÀNH CÔNG**.
 
-Refs: `doc/phase_0.md`, `docker-compose.zalo-adapter.yaml`, `integrations/zalo_adapter/README.md`
+Refs: `doc/deploy.md`, `docker-compose.zalo-adapter.yaml`, `integrations/zalo_adapter/README.md`

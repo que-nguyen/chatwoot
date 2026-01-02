@@ -8,7 +8,7 @@ usage() {
   cat <<'EOF'
 Usage: bash script/ops/chatwoot_upgrade.sh [--env-file PATH] --tag TAG [options]
 
-Upgrades the Chatwoot image in the Docker Compose stack (Phase 3).
+Upgrades the Chatwoot image in the Docker Compose stack.
 
 Options:
   -e, --env-file PATH     Env file used for compose rendering (default: CW_ENV_FILE or .env)
@@ -17,7 +17,7 @@ Options:
   --skip-backup           Skip pre-upgrade backup (default: run backup if stack is running)
   --skip-pull             Skip pulling images (useful for local tags / airgapped environments)
   --pull-all              Pull all services (default: only rails/sidekiq/migrate)
-  --skip-smoketest        Skip post-upgrade smoketest (default: run Phase 0 smoketest)
+  --skip-smoketest        Skip post-upgrade smoketest (default: run smoketest)
   -h, --help              Show this help
 
 Examples:

@@ -589,9 +589,9 @@ if [[ "$use_caddy" -eq 1 ]]; then
   if [[ -n "$caddy_domain" && "$caddy_domain" != "localhost" && "$caddy_domain" != "127.0.0.1" ]]; then
     if [[ "$force_ssl" != "true" ]]; then
       if [[ "$strict_production" -eq 1 ]]; then
-        check_fail "FORCE_SSL is not true; set FORCE_SSL=true when serving Chatwoot behind TLS (Phase 2)"
+        check_fail "FORCE_SSL is not true; set FORCE_SSL=true when serving Chatwoot behind TLS"
       else
-        check_warn "FORCE_SSL is not true; recommended FORCE_SSL=true when serving Chatwoot behind TLS (Phase 2)"
+        check_warn "FORCE_SSL is not true; recommended FORCE_SSL=true when serving Chatwoot behind TLS"
       fi
     fi
     if [[ -n "$frontend_url" && "$frontend_url" != https://* ]]; then
@@ -611,7 +611,23 @@ check_firewall_notice() {
 
   if command -v ufw >/dev/null 2>&1; then
     firewall_checked=1
-    ufw_out="$(ufw status 2>/dev/null || true)"
+    local ufw_out=""
+    local ufw_rc=0
+    ufw_out="$(ufw status 2>&1)" || ufw_rc=$?
+
+    if [[ "$ufw_rc" -ne 0 ]]; then
+      ufw_out=""
+      if command -v sudo >/dev/null 2>&1; then
+        if sudo -n true 2>/dev/null; then
+          ufw_out="$(sudo ufw status 2>/dev/null || true)"
+        elif [[ -t 0 ]]; then
+          echo "INFO ufw detected; reading status may require sudo." >&2
+          if sudo -v; then
+            ufw_out="$(sudo ufw status 2>/dev/null || true)"
+          fi
+        fi
+      fi
+    fi
     if [[ -z "$ufw_out" ]]; then
       check_warn "ufw detected, but unable to read status (try: sudo ufw status). Ensure required ports are allowed"
     elif printf "%s" "$ufw_out" | grep -qi "^Status:[[:space:]]*active"; then

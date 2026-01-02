@@ -8,13 +8,13 @@ usage() {
   cat <<'EOF'
 Usage: bash script/ops/chatwoot_caddy_smoketest.sh [--env-file PATH]
 
-Runs a minimal Phase 2 smoke test (Caddy TLS overlay):
+Runs a minimal smoke test (Caddy TLS overlay):
 - Compose services running/healthy (via script/ops/chatwoot_healthcheck.sh)
 - HTTP proxy reachable via Caddy (Host-based)
 - HTTPS proxy reachable via Caddy (SNI via curl --resolve; TLS verified for non-local domains)
 
 Notes:
-- Requires Phase 0 stack running and the Caddy overlay started.
+- Requires the base stack running and the Caddy overlay started.
 - Uses CADDY_DOMAIN (hostname only; no scheme) for TLS; defaults to localhost.
 
 The env file defaults to CW_ENV_FILE or .env.
@@ -102,7 +102,7 @@ check_warn() {
   echo "WARN $message" >&2
 }
 
-echo "== Chatwoot Phase 2 smoketest (Caddy) =="
+echo "== Chatwoot smoketest (Caddy) =="
 
 compose_files_value="$(get_effective_value CW_COMPOSE_FILES "")"
 if [[ -z "$compose_files_value" ]]; then

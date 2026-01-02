@@ -1,12 +1,12 @@
-# Phase 4 — Monitoring + Automated Backups (Docker Compose prod)
+# Monitoring + Automated Backups (Docker Compose prod)
 
-Phase này bổ sung 2 thứ tối thiểu để vận hành stack Chatwoot chạy theo `docker-compose.production.yaml`:
+Tài liệu này bổ sung 2 thứ tối thiểu để vận hành stack Chatwoot chạy theo `docker-compose.production.yaml`:
 - **Backup tự động** (Postgres + storage attachments) theo lịch.
 - **Monitoring/alert** tối thiểu dựa trên Docker healthchecks.
 
 ## 0) Điều kiện tiên quyết (pass/fail rõ ràng)
 
-### Phase 0 đang chạy ổn định
+### Điều kiện: stack đang chạy ổn định
 - PASS nếu service đều `Up` và (sau khi boot) hiển thị `(healthy)`:
   - `docker compose -f docker-compose.production.yaml ps`
 
@@ -54,8 +54,8 @@ bash script/ops/chatwoot_backup.sh --env-file .env.production
 - `CW_ENV_FILE` (default: `.env`) — nên trùng với env file đang dùng cho stack
 - `CW_COMPOSE_FILES` (default: `docker-compose.production.yaml`)
   - Nếu bạn chạy overlay, set ví dụ:
-    - Phase 2 (Caddy): `CW_COMPOSE_FILES="docker-compose.production.yaml docker-compose.caddy.yaml"`
-    - Phase 1 (Zalo): `CW_COMPOSE_FILES="docker-compose.production.yaml docker-compose.zalo-adapter.yaml"`
+    - Caddy overlay: `CW_COMPOSE_FILES="docker-compose.production.yaml docker-compose.caddy.yaml"`
+    - Zalo adapter overlay: `CW_COMPOSE_FILES="docker-compose.production.yaml docker-compose.zalo-adapter.yaml"`
 
 ### 1.3 Cron (ví dụ chạy lúc 02:00 mỗi ngày)
 Sửa crontab:
@@ -227,4 +227,4 @@ bash script/ops/chatwoot_systemd_smoketest.sh --user --healthcheck-only
 
 - Khi (1) backup chạy PASS theo lịch và (2) healthcheck PASS/alert hoạt động ⇒ **OPS baseline hoàn tất**.
 
-Refs: `doc/phase_3.md`, `docker-compose.production.yaml`, `script/ops/chatwoot_backup.sh`, `script/ops/chatwoot_healthcheck.sh`
+Refs: `doc/backup_restore_upgrade.md`, `docker-compose.production.yaml`, `script/ops/chatwoot_backup.sh`, `script/ops/chatwoot_healthcheck.sh`

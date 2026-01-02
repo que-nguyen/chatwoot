@@ -8,14 +8,14 @@ usage() {
   cat <<'EOF'
 Usage: bash script/ops/chatwoot_zalo_smoketest.sh [--env-file PATH]
 
-Runs a minimal Phase 1 smoke test (Zalo adapter overlay):
+Runs a minimal smoke test (Zalo adapter overlay):
 - Compose services running/healthy (via script/ops/chatwoot_healthcheck.sh)
 - Zalo adapter /health reachable from host (http://127.0.0.1:$ZALO_ADAPTER_HOST_PORT/health)
 - Rails container can reach adapter service (http://zalo_adapter:3001/health)
 - Chatwoot -> adapter webhook delivery (signed when possible)
 
 Notes:
-- Requires Phase 0 stack running and the Zalo adapter overlay started.
+- Requires the base stack running and the Zalo adapter overlay started.
 - Expects the adapter env file (ZALO_ADAPTER_ENV_FILE or ./integrations/zalo_adapter/.env)
   to contain CHATWOOT_INBOX_IDENTIFIER (and optionally CHATWOOT_HMAC_TOKEN).
 
@@ -104,7 +104,7 @@ check_warn() {
   echo "WARN $message" >&2
 }
 
-echo "== Chatwoot Phase 1 smoketest (Zalo adapter) =="
+echo "== Chatwoot smoketest (Zalo adapter) =="
 
 tmp_files=()
 cleanup() {

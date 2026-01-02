@@ -1,4 +1,4 @@
-# Chatwoot (Docker Compose) – Runbook triển khai (Phase 0)
+# Chatwoot (Docker Compose) – Runbook triển khai
 
 Tài liệu này hướng dẫn triển khai Chatwoot bằng Docker Compose theo hướng “chạy được trước, tối ưu sau”, kèm checkpoint pass/fail và các lỗi thường gặp.
 
@@ -58,7 +58,7 @@ Khuyến nghị không dùng `.env` chung cho mọi môi trường. Tạo file r
 cp .env.example .env.production
 ```
 
-### 2.2 Các biến bắt buộc (Phase 0)
+### 2.2 Các biến bắt buộc
 
 Mở `.env.production` và set tối thiểu:
 
@@ -79,7 +79,7 @@ openssl rand -hex 24  # REDIS_PASSWORD
 
 - `CW_IMAGE_TAG`: pin version image (không dùng `latest` cho production)
 - `ENABLE_ACCOUNT_SIGNUP=false`: chặn self-signup (tùy chính sách)
-- `FORCE_SSL=true`: khi chạy sau reverse proxy TLS (Phase 2 / Caddy)
+- `FORCE_SSL=true`: khi chạy sau reverse proxy TLS (HTTPS / Caddy)
 
 ### 2.4 Chọn compose files (CW_COMPOSE_FILES)
 

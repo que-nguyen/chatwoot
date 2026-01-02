@@ -8,7 +8,7 @@ usage() {
   cat <<'EOF'
 Usage: bash script/ops/chatwoot_smoketest.sh [--env-file PATH]
 
-Runs a minimal Phase 0 smoke test:
+Runs a minimal smoke test:
 - Compose services running/healthy (via script/ops/chatwoot_healthcheck.sh)
 - Web UI reachable from host (HTTP 2xx/3xx)
 

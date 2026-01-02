@@ -8,7 +8,7 @@ usage() {
   cat <<'EOF'
 Usage: bash DEPLOY.sh [options]
 
-One-shot Phase 0 deployment helper for Chatwoot (Docker Compose):
+One-shot deployment helper for Chatwoot (Docker Compose):
 - Creates an env file (defaults to .env.production) from .env.example if missing
 - Generates required secrets if missing/placeholder:
   - SECRET_KEY_BASE, POSTGRES_PASSWORD, REDIS_PASSWORD
@@ -273,7 +273,7 @@ ensure_sane_defaults() {
   fi
 }
 
-echo "== Chatwoot one-shot deploy (Phase 0) =="
+echo "== Chatwoot one-shot deploy =="
 echo "env file: $env_file"
 
 ensure_env_file

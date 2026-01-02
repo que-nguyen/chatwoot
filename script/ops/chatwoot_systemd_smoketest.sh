@@ -8,7 +8,7 @@ usage() {
   cat <<'EOF'
 Usage: bash script/ops/chatwoot_systemd_smoketest.sh [options]
 
-Runs a minimal Phase 4 smoke test for systemd timers:
+Runs a minimal smoke test for systemd timers:
 - chatwoot-backup.timer enabled + active
 - chatwoot-healthcheck.timer enabled + active
 

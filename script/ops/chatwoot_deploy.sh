@@ -8,7 +8,7 @@ usage() {
   cat <<'EOF'
 Usage: bash script/ops/chatwoot_deploy.sh [options]
 
-Runs a minimal Phase 0 deployment using Docker Compose:
+Runs a minimal Docker Compose deployment:
 1) Preflight checks
 2) docker compose up -d
 3) Smoke test (health + web reachability)
@@ -134,7 +134,7 @@ fi
 
 frontend_url="$(get_effective_value FRONTEND_URL "")"
 if [[ -n "$frontend_url" ]]; then
-  echo "Next: open $frontend_url and create the admin user (Phase 0 verification)"
+  echo "Next: open $frontend_url and create the admin user"
 else
-  echo "Next: open the Web UI and create the admin user (Phase 0 verification)"
+  echo "Next: open the Web UI and create the admin user"
 fi

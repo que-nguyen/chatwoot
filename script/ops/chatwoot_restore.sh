@@ -8,7 +8,7 @@ usage() {
   cat <<'EOF'
 Usage: bash script/ops/chatwoot_restore.sh [--env-file PATH] [options] --yes
 
-Restores a Chatwoot Docker Compose stack from backup files (Phase 3).
+Restores a Chatwoot Docker Compose stack from backup files.
 
 Required:
   --yes                   Confirm you understand this overwrites data

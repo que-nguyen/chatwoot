@@ -1,10 +1,10 @@
-# Phase 2 — Public access + TLS cho Chatwoot bằng Caddy (Docker Compose overlay)
+# Public access + TLS cho Chatwoot bằng Caddy (Docker Compose overlay)
 
-Phase này giúp đưa Chatwoot (đang chạy theo Phase 0) ra internet qua domain + HTTPS, không cần cài Nginx/Caddy trên host.
+Tài liệu này giúp đưa Chatwoot (stack base) ra internet qua domain + HTTPS, không cần cài Nginx/Caddy trên host.
 
 ## 0) Điều kiện tiên quyết (pass/fail rõ ràng)
 
-### Phase 0 đã chạy ổn định
+### Điều kiện: Chatwoot đã chạy ổn định
 - PASS nếu `rails/postgres/redis/sidekiq` đều `Up` và `(healthy)`:
   - `docker compose -f docker-compose.production.yaml ps`
 
@@ -18,8 +18,8 @@ Ghi chú:
 - Let's Encrypt HTTP-01/TLS-ALPN challenges thường yêu cầu port `80/443` đúng chuẩn.
 
 ### Lưu ý về port override / overlay (tránh downtime ngoài ý muốn)
-- Nếu Phase 0 đang chạy với `CW_WEB_PORT/CW_POSTGRES_PORT/CW_REDIS_PORT` khác mặc định, hãy đảm bảo các biến này **vẫn được set** (export hoặc để trong `.env`) khi chạy lệnh ở Phase 2. Nếu thiếu, `docker compose up` có thể recreate container với port mặc định và fail do port conflict.
-- Nếu bạn đang chạy overlay Phase 1 (Zalo adapter), hãy include cả file đó khi `up/pull/logs` để tránh orphan containers.
+- Nếu stack base đang chạy với `CW_WEB_PORT/CW_POSTGRES_PORT/CW_REDIS_PORT` khác mặc định, hãy đảm bảo các biến này **vẫn được set** (export hoặc để trong `.env`) khi chạy các lệnh ở đây. Nếu thiếu, `docker compose up` có thể recreate container với port mặc định và fail do port conflict.
+- Nếu bạn đang chạy overlay Zalo adapter, hãy include cả file đó khi `up/pull/logs` để tránh orphan containers.
 
 ## 1) Chuẩn bị `.env` (không commit)
 
@@ -38,7 +38,7 @@ Tuỳ chọn (đổi port nếu xung đột):
 
 ## 2) Start stack với Caddy overlay
 
-Nếu đang chạy kèm Zalo adapter (Phase 1), dùng cả 3 file:
+Nếu đang chạy kèm Zalo adapter, dùng cả 3 file:
 ```sh
 docker compose \
   -f docker-compose.production.yaml \
@@ -65,7 +65,7 @@ docker compose \
 
 ## 3) Checkpoint kiểm chứng chạy thành công
 
-Tuỳ chọn (chạy nhanh, tái lập được): smoke-test Phase 2 (Caddy reverse proxy + TLS):
+Tuỳ chọn (chạy nhanh, tái lập được): smoke-test (Caddy reverse proxy + TLS):
 - `bash script/ops/chatwoot_caddy_smoketest.sh`
 
 PASS nếu script in `Smoketest OK` (exit code `0`).
@@ -104,4 +104,4 @@ Ghi chú:
 
 Khi checkpoint (3) PASS ⇒ **PUBLIC + TLS THÀNH CÔNG**.
 
-Refs: `doc/phase_0.md`, `docker-compose.caddy.yaml`, `Caddyfile`
+Refs: `doc/deploy.md`, `docker-compose.caddy.yaml`, `Caddyfile`

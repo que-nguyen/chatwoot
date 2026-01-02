@@ -121,7 +121,7 @@ Chatwoot now supports 1-Click deployment to DigitalOcean as a kubernetes app.
 
 ### Docker Compose (production/staging)
 
-This repo also includes a Docker Compose production stack and runbooks (Phase 0–4):
+This repo also includes a Docker Compose production stack and runbooks:
 - `doc/README.md` (runbook index)
 - `docker-compose.production.yaml` (base stack)
 - overlays: `docker-compose.caddy.yaml`, `docker-compose.zalo-adapter.yaml`

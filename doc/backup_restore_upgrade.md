@@ -1,10 +1,10 @@
-# Phase 3 — Backup/Restore + Upgrade Chatwoot (Docker Compose prod)
+# Backup/Restore + Upgrade Chatwoot (Docker Compose prod)
 
-Phase này là runbook **sao lưu/khôi phục** và **nâng cấp** cho stack chạy theo `docker-compose.production.yaml`.
+Tài liệu này là runbook **sao lưu/khôi phục** và **nâng cấp** cho stack chạy theo `docker-compose.production.yaml`.
 
 ## 0) Điều kiện tiên quyết (pass/fail rõ ràng)
 
-### Phase 0 đang chạy ổn định
+### Điều kiện: stack đang chạy ổn định
 - PASS nếu service đều `Up` và (sau khi boot) hiển thị `(healthy)`:
   - `docker compose -f docker-compose.production.yaml ps`
 
@@ -146,7 +146,7 @@ CW_IMAGE_TAG=4.9.1 docker compose -f docker-compose.production.yaml pull
 CW_IMAGE_TAG=4.9.1 docker compose -f docker-compose.production.yaml up -d
 ```
 
-Nếu đang chạy overlay (Phase 1/2), dùng cả hai file khi pull/up:
+Nếu đang chạy overlays (ví dụ Zalo adapter/Caddy), dùng cả hai file khi pull/up:
 ```sh
 CW_IMAGE_TAG=4.9.1 docker compose -f docker-compose.production.yaml -f docker-compose.caddy.yaml pull
 CW_IMAGE_TAG=4.9.1 docker compose -f docker-compose.production.yaml -f docker-compose.caddy.yaml up -d
@@ -166,4 +166,4 @@ PASS nếu:
 
 Khi backup tạo được file hợp lệ, restore/upgrade chạy PASS theo các checkpoint ⇒ **OPS THÀNH CÔNG**.
 
-Refs: `doc/phase_0.md`, `docker-compose.production.yaml`, `docker-compose.caddy.yaml`, `docker-compose.zalo-adapter.yaml`
+Refs: `doc/deploy.md`, `docker-compose.production.yaml`, `docker-compose.caddy.yaml`, `docker-compose.zalo-adapter.yaml`
