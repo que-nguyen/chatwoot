@@ -23,6 +23,19 @@ Tip: dùng wrapper `script/ops/chatwoot_compose.sh` để luôn include đúng `
 
 Gợi ý: `script/ops/chatwoot_preflight.sh` sẽ WARN nếu phát hiện service overlay đang chạy (ví dụ `caddy`, `zalo_adapter`) nhưng bạn chưa include file overlay tương ứng trong `CW_COMPOSE_FILES`.
 
+## Quick checks (khuyến nghị)
+
+Sau khi đã tạo `.env` từ `.env.example` và set các biến bắt buộc (xem `doc/phase_0.md`):
+
+- Preflight (secrets + port + overlay mismatch):
+  - `bash script/ops/chatwoot_preflight.sh`
+- Start stack (base hoặc kèm overlays theo `CW_COMPOSE_FILES`):
+  - `script/ops/chatwoot_compose.sh up -d`
+- Smoke tests:
+  - Phase 0: `bash script/ops/chatwoot_smoketest.sh`
+  - Phase 1: `bash script/ops/chatwoot_zalo_smoketest.sh` (nếu có `zalo_adapter`)
+  - Phase 2: `bash script/ops/chatwoot_caddy_smoketest.sh` (nếu có `caddy`)
+
 ## Helper scripts (tuỳ chọn)
 
 - `script/ops/chatwoot_preflight.sh`: check nhanh prerequisite/port/secret trước khi `up -d`
