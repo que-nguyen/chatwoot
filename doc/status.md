@@ -11,6 +11,8 @@ Last verified: 2026-01-02
 - Phase 1 smoketest (Zalo adapter): `bash script/ops/chatwoot_zalo_smoketest.sh` (OK)
 - Phase 2 smoketest (Caddy): `bash script/ops/chatwoot_caddy_smoketest.sh` (OK)
 - Backup: `bash script/ops/chatwoot_backup.sh` (OK)
+- Phase 3 restore rehearsal: `bash script/ops/chatwoot_restore.sh --yes --pgdump backup/pgdump-2026-01-02-114815.sql.gz --storage backup/storage-2026-01-02-114815.tgz` (OK)
+- Phase 3 upgrade rehearsal: `bash script/ops/chatwoot_upgrade.sh --tag latest` (OK)
 
 ## Host port mapping (observed)
 
@@ -22,6 +24,4 @@ Last verified: 2026-01-02
 
 ## Next
 
-- Phase 3: rehearse restore on staging (`script/ops/chatwoot_restore.sh`)
-- Phase 3: rehearse upgrade flow (`script/ops/chatwoot_upgrade.sh`)
 - Phase 4: install/enable systemd timers on target VPS (`script/ops/systemd/*`)
