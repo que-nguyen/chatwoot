@@ -21,6 +21,8 @@ Khi bạn chạy thêm Phase 1/2 (overlay), hãy include **đầy đủ** các f
 
 Tip: dùng wrapper `script/ops/chatwoot_compose.sh` để luôn include đúng `--env-file` + danh sách compose files (set `CW_ENV_FILE` và `CW_COMPOSE_FILES`).
 
+Gợi ý: `script/ops/chatwoot_preflight.sh` sẽ WARN nếu phát hiện service overlay đang chạy (ví dụ `caddy`, `zalo_adapter`) nhưng bạn chưa include file overlay tương ứng trong `CW_COMPOSE_FILES`.
+
 ## Helper scripts (tuỳ chọn)
 
 - `script/ops/chatwoot_preflight.sh`: check nhanh prerequisite/port/secret trước khi `up -d`

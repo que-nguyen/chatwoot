@@ -84,6 +84,7 @@ get_effective_value() {
 }
 
 failed=0
+suggested_env_updates=()
 
 check_pass() {
   local message="$1"
@@ -234,6 +235,31 @@ resolve_running_host_port() {
   return 1
 }
 
+detect_running_services() {
+  "${compose[@]}" ps --services 2>/dev/null || true
+}
+
+running_services="$(detect_running_services)"
+running_has_caddy=0
+running_has_zalo_adapter=0
+
+if grep -qx "caddy" <<<"$running_services"; then
+  running_has_caddy=1
+fi
+if grep -qx "zalo_adapter" <<<"$running_services"; then
+  running_has_zalo_adapter=1
+fi
+
+if [[ "$running_has_caddy" -eq 1 && "$use_caddy" -eq 0 ]]; then
+  check_warn "Detected running service 'caddy' but CW_COMPOSE_FILES does not include docker-compose.caddy.yaml (include it to avoid orphan containers)"
+  use_caddy=1
+fi
+
+if [[ "$running_has_zalo_adapter" -eq 1 && "$use_zalo_adapter" -eq 0 ]]; then
+  check_warn "Detected running service 'zalo_adapter' but CW_COMPOSE_FILES does not include docker-compose.zalo-adapter.yaml (include it to avoid orphan containers)"
+  use_zalo_adapter=1
+fi
+
 web_port="$(get_effective_value CW_WEB_PORT "3000")"
 postgres_port="$(get_effective_value CW_POSTGRES_PORT "5432")"
 redis_port="$(get_effective_value CW_REDIS_PORT "6379")"
@@ -244,12 +270,15 @@ running_redis_port="$(resolve_running_host_port redis 6379 || true)"
 
 if [[ -n "$running_web_port" && "$web_port" =~ ^[0-9]+$ && "$web_port" != "$running_web_port" ]]; then
   check_fail "CW_WEB_PORT=$web_port does not match the running stack (rails=$running_web_port); set CW_WEB_PORT=$running_web_port to avoid accidental recreate/port conflicts"
+  suggested_env_updates+=("CW_WEB_PORT=$running_web_port")
 fi
 if [[ -n "$running_postgres_port" && "$postgres_port" =~ ^[0-9]+$ && "$postgres_port" != "$running_postgres_port" ]]; then
   check_fail "CW_POSTGRES_PORT=$postgres_port does not match the running stack (postgres=$running_postgres_port); set CW_POSTGRES_PORT=$running_postgres_port to avoid accidental recreate/port conflicts"
+  suggested_env_updates+=("CW_POSTGRES_PORT=$running_postgres_port")
 fi
 if [[ -n "$running_redis_port" && "$redis_port" =~ ^[0-9]+$ && "$redis_port" != "$running_redis_port" ]]; then
   check_fail "CW_REDIS_PORT=$redis_port does not match the running stack (redis=$running_redis_port); set CW_REDIS_PORT=$running_redis_port to avoid accidental recreate/port conflicts"
+  suggested_env_updates+=("CW_REDIS_PORT=$running_redis_port")
 fi
 
 check_port_free "$web_port" "CW_WEB_PORT" "$running_web_port"
@@ -265,9 +294,11 @@ if [[ "$use_caddy" -eq 1 ]]; then
 
   if [[ -n "$running_caddy_http_port" && "$caddy_http_port" =~ ^[0-9]+$ && "$caddy_http_port" != "$running_caddy_http_port" ]]; then
     check_fail "CW_CADDY_HTTP_PORT=$caddy_http_port does not match the running stack (caddy=$running_caddy_http_port); set CW_CADDY_HTTP_PORT=$running_caddy_http_port to avoid accidental recreate/port conflicts"
+    suggested_env_updates+=("CW_CADDY_HTTP_PORT=$running_caddy_http_port")
   fi
   if [[ -n "$running_caddy_https_port" && "$caddy_https_port" =~ ^[0-9]+$ && "$caddy_https_port" != "$running_caddy_https_port" ]]; then
     check_fail "CW_CADDY_HTTPS_PORT=$caddy_https_port does not match the running stack (caddy=$running_caddy_https_port); set CW_CADDY_HTTPS_PORT=$running_caddy_https_port to avoid accidental recreate/port conflicts"
+    suggested_env_updates+=("CW_CADDY_HTTPS_PORT=$running_caddy_https_port")
   fi
 
   check_port_free "$caddy_http_port" "CW_CADDY_HTTP_PORT" "$running_caddy_http_port"
@@ -280,6 +311,7 @@ if [[ "$use_zalo_adapter" -eq 1 ]]; then
 
   if [[ -n "$running_zalo_port" && "$zalo_host_port" =~ ^[0-9]+$ && "$zalo_host_port" != "$running_zalo_port" ]]; then
     check_fail "ZALO_ADAPTER_HOST_PORT=$zalo_host_port does not match the running stack (zalo_adapter=$running_zalo_port); set ZALO_ADAPTER_HOST_PORT=$running_zalo_port to avoid accidental recreate/port conflicts"
+    suggested_env_updates+=("ZALO_ADAPTER_HOST_PORT=$running_zalo_port")
   fi
 
   check_port_free "$zalo_host_port" "ZALO_ADAPTER_HOST_PORT" "$running_zalo_port"
@@ -295,6 +327,14 @@ fi
 caddy_domain="$(get_effective_value CADDY_DOMAIN "")"
 if [[ -n "$caddy_domain" && "$caddy_domain" == *"://"* ]]; then
   check_warn "CADDY_DOMAIN contains scheme; set only hostname to enable TLS (got '$caddy_domain')"
+fi
+
+if [[ "${#suggested_env_updates[@]}" -gt 0 ]]; then
+  echo
+  echo "Suggested env updates (paste into your env file to match the running stack):"
+  for line in "${suggested_env_updates[@]}"; do
+    echo "  $line"
+  done
 fi
 
 if [[ "$failed" -ne 0 ]]; then

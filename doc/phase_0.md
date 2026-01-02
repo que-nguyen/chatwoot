@@ -56,6 +56,8 @@ PASS nếu script in `Preflight OK` (exit code `0`).
 
 Ghi chú:
 - Script **không** in ra secret values; chỉ check tồn tại/độ dài và port conflict.
+- Nếu stack **đang chạy** nhưng port trong env file không khớp port thực tế của stack (ví dụ trước đó bạn start bằng “one-shot” env vars),
+  script sẽ FAIL và in ra block `Suggested env updates ...` để bạn copy/paste vào env file cho khớp (tránh accidental recreate + port conflicts).
 - Dùng `CW_ENV_FILE` (mặc định `.env`). Có thể override:
   - `bash script/ops/chatwoot_preflight.sh --env-file .env.production`
 - Nếu bạn đang dùng port override (`CW_WEB_PORT/CW_POSTGRES_PORT/CW_REDIS_PORT`), hãy đảm bảo các biến này được export hoặc có trong env file bạn dùng để script check đúng port.
