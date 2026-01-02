@@ -105,13 +105,18 @@ else
   check_fail "compose services unhealthy (see output above; try: docker compose ps/logs)"
 fi
 
-web_port="$(get_effective_value CW_WEB_PORT "3000")"
-if [[ -z "$web_port" ]]; then
-  web_port="3000"
+web_port=""
+compose_port_line="$(CW_ENV_FILE="$env_file" script/ops/chatwoot_compose.sh port rails 3000 2>/dev/null | head -n 1 || true)"
+if [[ "$compose_port_line" =~ :([0-9]+)$ ]]; then
+  web_port="${BASH_REMATCH[1]}"
 fi
 
-if [[ ! "$web_port" =~ ^[0-9]+$ ]]; then
-  check_warn "CW_WEB_PORT is not numeric: '$web_port' (falling back to 3000)"
+if [[ -z "$web_port" ]]; then
+  web_port="$(get_effective_value CW_WEB_PORT "3000")"
+fi
+
+if [[ -z "$web_port" || ! "$web_port" =~ ^[0-9]+$ ]]; then
+  check_warn "Unable to resolve CW_WEB_PORT (compose_port='${compose_port_line:-}'); falling back to 3000"
   web_port="3000"
 fi
 
