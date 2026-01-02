@@ -112,6 +112,13 @@ sudo systemctl enable --now chatwoot-backup.timer
 systemctl list-timers --all | grep chatwoot-backup
 ```
 
+4) Verify + xem log (khuyến nghị):
+```sh
+systemctl status chatwoot-backup.timer
+sudo systemctl start chatwoot-backup.service
+journalctl -u chatwoot-backup.service --since today -f
+```
+
 ## 2) Monitoring / alert tối thiểu
 
 Repo đã có script healthcheck chạy trên host:
@@ -175,6 +182,13 @@ CW_ALERT_WEBHOOK_URL=https://...
 sudo systemctl daemon-reload
 sudo systemctl enable --now chatwoot-healthcheck.timer
 systemctl list-timers --all | grep chatwoot-healthcheck
+```
+
+4) Verify + xem log (khuyến nghị):
+```sh
+systemctl status chatwoot-healthcheck.timer
+sudo systemctl start chatwoot-healthcheck.service
+journalctl -u chatwoot-healthcheck.service --since today -f
 ```
 
 ## 3) Kết luận

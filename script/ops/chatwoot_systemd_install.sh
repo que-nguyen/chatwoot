@@ -131,8 +131,13 @@ if [[ "$(id -u)" -ne 0 ]]; then
   if command -v sudo >/dev/null 2>&1; then
     sudo_cmd=(sudo)
   else
-    echo "ERROR: must run as root (or install sudo)" >&2
-    exit 2
+    if [[ "$dry_run" -eq 1 ]]; then
+      echo "WARN: sudo not found; continuing due to --dry-run (commands will be printed with a sudo prefix)" >&2
+      sudo_cmd=(sudo)
+    else
+      echo "ERROR: must run as root (or install sudo)" >&2
+      exit 2
+    fi
   fi
 fi
 
@@ -190,8 +195,12 @@ alert_webhook_mode="${alert_webhook_mode:-slack}"
 alert_prefix="${alert_prefix:-chatwoot}"
 
 if ! command -v systemctl >/dev/null 2>&1; then
-  echo "ERROR: systemctl not found; systemd is required to use these timers" >&2
-  exit 2
+  if [[ "$dry_run" -eq 1 ]]; then
+    echo "WARN: systemctl not found; continuing due to --dry-run (this script requires systemd on the target host)" >&2
+  else
+    echo "ERROR: systemctl not found; systemd is required to use these timers" >&2
+    exit 2
+  fi
 fi
 
 units_dir="$repo_root/script/ops/systemd"
