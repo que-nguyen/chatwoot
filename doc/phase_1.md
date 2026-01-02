@@ -99,6 +99,11 @@ Health check (host):
 
 ## 4) Checkpoint kiểm chứng chạy thành công
 
+Tuỳ chọn (chạy nhanh, tái lập được): smoke-test Phase 1 (health + connectivity + webhook):
+- `bash script/ops/chatwoot_zalo_smoketest.sh`
+
+PASS nếu script in `Smoketest OK` (exit code `0`).
+
 ### 4.1 Adapter sống
 - PASS nếu `/health` trả `200`:
   - `curl -fsS -o /dev/null -w '%{http_code}\\n' "http://127.0.0.1:${ZALO_ADAPTER_HOST_PORT:-3002}/health"`

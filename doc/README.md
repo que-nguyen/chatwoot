@@ -25,6 +25,7 @@ Tip: dùng wrapper `script/ops/chatwoot_compose.sh` để luôn include đúng `
 
 - `script/ops/chatwoot_preflight.sh`: check nhanh prerequisite/port/secret trước khi `up -d`
 - `script/ops/chatwoot_smoketest.sh`: smoke-test Phase 0 (health + Web UI)
+- `script/ops/chatwoot_zalo_smoketest.sh`: smoke-test Phase 1 (adapter health + webhook delivery)
 - `script/ops/chatwoot_healthcheck.sh`: check health & exit code (dùng cho cron/systemd alert)
 - `script/ops/chatwoot_backup.sh`: backup Postgres + storage (dùng cho cron/systemd)
 - `script/ops/chatwoot_compose.sh`: wrapper `docker compose` dùng đúng env + compose files
