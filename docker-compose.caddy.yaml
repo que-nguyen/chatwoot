@@ -15,7 +15,11 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "nc -z -w 2 127.0.0.1 80"]
+      test:
+        [
+          "CMD-SHELL",
+          "if command -v wget >/dev/null 2>&1; then wget -qO- http://127.0.0.1:2019/config/ >/dev/null 2>&1; elif command -v nc >/dev/null 2>&1; then nc -z -w 2 127.0.0.1 80; else exit 1; fi"
+        ]
       interval: 10s
       timeout: 3s
       retries: 10
