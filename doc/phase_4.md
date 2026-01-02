@@ -119,6 +119,11 @@ sudo systemctl start chatwoot-backup.service
 journalctl -u chatwoot-backup.service --since today -f
 ```
 
+5) Quick verify (tuỳ chọn):
+```sh
+bash script/ops/chatwoot_systemd_smoketest.sh
+```
+
 ## 2) Monitoring / alert tối thiểu
 
 Repo đã có script healthcheck chạy trên host:
@@ -189,6 +194,11 @@ systemctl list-timers --all | grep chatwoot-healthcheck
 systemctl status chatwoot-healthcheck.timer
 sudo systemctl start chatwoot-healthcheck.service
 journalctl -u chatwoot-healthcheck.service --since today -f
+```
+
+Quick verify (tuỳ chọn):
+```sh
+bash script/ops/chatwoot_systemd_smoketest.sh --healthcheck-only
 ```
 
 ## 3) Kết luận

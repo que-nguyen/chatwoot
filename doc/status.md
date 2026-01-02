@@ -24,4 +24,4 @@ Last verified: 2026-01-02
 
 ## Next
 
-- Phase 4: install/enable systemd timers on target VPS (`bash script/ops/chatwoot_systemd_install.sh` + `script/ops/systemd/*`)
+- Phase 4: install/enable systemd timers on target VPS (`bash script/ops/chatwoot_systemd_install.sh` + `bash script/ops/chatwoot_systemd_smoketest.sh`)

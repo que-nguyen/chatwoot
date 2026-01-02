@@ -48,4 +48,5 @@ Sau khi đã tạo `.env` từ `.env.example` và set các biến bắt buộc (
 - `script/ops/chatwoot_backup.sh`: backup Postgres + storage (dùng cho cron/systemd)
 - `script/ops/chatwoot_restore.sh`: restore Postgres + storage từ backup files (Phase 3, destructive)
 - `script/ops/chatwoot_upgrade.sh`: upgrade Chatwoot image tag + smoketest (Phase 3)
+- `script/ops/chatwoot_systemd_smoketest.sh`: check nhanh systemd timers (Phase 4)
 - `script/ops/chatwoot_compose.sh`: wrapper `docker compose` dùng đúng env + compose files
