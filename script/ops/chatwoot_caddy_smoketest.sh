@@ -15,7 +15,7 @@ Runs a minimal Phase 2 smoke test (Caddy TLS overlay):
 
 Notes:
 - Requires Phase 0 stack running and the Caddy overlay started.
-- Expects CADDY_DOMAIN to be set to a hostname (no http:// or https://) for TLS.
+- Uses CADDY_DOMAIN (hostname only; no scheme) for TLS; defaults to localhost.
 
 The env file defaults to CW_ENV_FILE or .env.
 EOF
@@ -115,13 +115,28 @@ else
   check_fail "compose services unhealthy (see output above)"
 fi
 
-domain="$(get_effective_value CADDY_DOMAIN "")"
+domain_source="default"
+if [[ -n "${CADDY_DOMAIN+x}" ]]; then
+  domain_source="env"
+elif [[ -f "$env_file" ]] && grep -Eq '^[[:space:]]*CADDY_DOMAIN[[:space:]]*=' "$env_file"; then
+  domain_source="file"
+fi
+
+domain="$(trim "$(get_effective_value CADDY_DOMAIN "localhost")")"
 if [[ -z "$domain" ]]; then
-  check_fail "CADDY_DOMAIN is missing/empty (required for TLS; set CADDY_DOMAIN=localhost for local smoke-test, or your public domain in production)"
-elif [[ "$domain" == *"://"* ]]; then
+  domain="localhost"
+  domain_source="default"
+fi
+
+domain_ok=1
+if [[ "$domain" == *"://"* ]]; then
   check_fail "CADDY_DOMAIN contains scheme; set only hostname to enable TLS (got '$domain')"
+  domain_ok=0
 else
-  check_pass "CADDY_DOMAIN present ($domain)"
+  if [[ "$domain_source" == "default" ]]; then
+    check_warn "CADDY_DOMAIN not set; defaulting to localhost"
+  fi
+  check_pass "CADDY_DOMAIN OK ($domain)"
 fi
 
 http_port=""
@@ -160,7 +175,7 @@ if [[ -z "$https_port" || ! "$https_port" =~ ^[0-9]+$ ]]; then
 fi
 
 if command -v curl >/dev/null 2>&1; then
-  if [[ -n "$domain" && "$domain" != *"://"* ]]; then
+  if [[ "$domain_ok" -eq 1 ]]; then
     http_code="$(curl -sS -o /dev/null -w '%{http_code}' -H "Host: $domain" "http://127.0.0.1:${http_port}/" || true)"
     if [[ "$http_code" =~ ^[23][0-9]{2}$ ]]; then
       check_pass "HTTP proxy reachable (127.0.0.1:${http_port} Host:${domain} -> $http_code)"

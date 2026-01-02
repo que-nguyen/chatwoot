@@ -2,7 +2,7 @@ services:
   caddy:
     image: caddy:2-alpine
     environment:
-      - CADDY_DOMAIN=${CADDY_DOMAIN:-http://localhost}
+      - CADDY_DOMAIN=${CADDY_DOMAIN:-localhost}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

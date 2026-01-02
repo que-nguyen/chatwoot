@@ -26,9 +26,10 @@ Ghi chú:
 Trong `.env` (hoặc export khi chạy compose), set tối thiểu:
 - `FRONTEND_URL=https://chatwoot.example.com`
 - `FORCE_SSL=true`
-- `CADDY_DOMAIN=chatwoot.example.com`
+- `CADDY_DOMAIN=chatwoot.example.com` (production) hoặc `CADDY_DOMAIN=localhost` (local)
 
 Ghi chú:
+- Nếu không set `CADDY_DOMAIN`, Caddy sẽ default `localhost` (TLS bằng internal CA).
 - `CADDY_DOMAIN` nên là domain **không kèm scheme** (`https://`/`http://`). Nếu bạn set `http://...`, Caddy sẽ chạy **HTTP-only** và TLS trên port `443` sẽ không hoạt động (dù compose vẫn map port `443`).
 
 Tuỳ chọn (đổi port nếu xung đột):

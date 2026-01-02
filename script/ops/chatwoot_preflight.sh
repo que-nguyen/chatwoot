@@ -475,7 +475,7 @@ fi
 caddy_domain="$(get_effective_value CADDY_DOMAIN "")"
 if [[ "$use_caddy" -eq 1 ]]; then
   if [[ -z "$caddy_domain" ]]; then
-    check_warn "CADDY_DOMAIN is missing/empty; Caddy will default to http://localhost (HTTP-only). Set CADDY_DOMAIN (hostname only) to enable TLS"
+    check_warn "CADDY_DOMAIN is missing/empty; Caddy will default to localhost (auto-HTTPS with internal CA). Set CADDY_DOMAIN to your public domain in production"
   elif [[ "$caddy_domain" == *"://"* ]]; then
     check_warn "CADDY_DOMAIN contains scheme; set only hostname to enable TLS (got '$caddy_domain')"
   fi
