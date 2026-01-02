@@ -16,6 +16,39 @@ Phase này là runbook **sao lưu/khôi phục** và **nâng cấp** cho stack c
 - PASS nếu tạo được:
   - `mkdir -p backup`
 
+## 0.1) Rehearsal (khuyến nghị trước khi làm trên prod)
+
+Mục tiêu: tập restore/upgrade trên một stack “tách biệt” để tránh ảnh hưởng prod.
+
+**Nguyên tắc tách biệt:**
+- Dùng **project name khác** (`COMPOSE_PROJECT_NAME`) để tách volumes/networks.
+- Dùng **host ports khác** để tránh conflict.
+- Dùng **env file khác** (ví dụ `.env.rehearsal`) để tái lập được.
+
+Ví dụ tạo rehearsal env file (không commit):
+```sh
+cp .env .env.rehearsal
+```
+
+Trong `.env.rehearsal`, set tối thiểu (ví dụ):
+```sh
+COMPOSE_PROJECT_NAME=chatwoot-rehearsal
+CW_WEB_PORT=3010
+CW_POSTGRES_PORT=5440
+CW_REDIS_PORT=6385
+CW_CADDY_HTTP_PORT=8085
+CW_CADDY_HTTPS_PORT=8445
+ZALO_ADAPTER_HOST_PORT=3005
+```
+
+Start rehearsal stack:
+```sh
+bash script/ops/chatwoot_deploy.sh --env-file .env.rehearsal
+```
+
+Khi chạy backup/restore/upgrade rehearsal, luôn chỉ rõ `--env-file .env.rehearsal`
+(và/hoặc export `COMPOSE_PROJECT_NAME=chatwoot-rehearsal` nếu bạn không đặt biến này trong file).
+
 ## 1) Backup (khuyến nghị theo thứ tự)
 
 Tuỳ chọn (tái lập được): dùng host script trong repo:
