@@ -56,6 +56,8 @@ PASS nếu script in `Preflight OK` (exit code `0`).
 
 Ghi chú:
 - Script **không** in ra secret values; chỉ check tồn tại/độ dài và port conflict.
+- Script sẽ WARN nếu disk/RAM trên host quá thấp (check nhanh để tránh start stack trên máy cấu hình yếu).
+- Script sẽ WARN nếu `CW_IMAGE_TAG` chưa pin (mặc định `latest`) — khuyến nghị pin version cho production để tránh upgrade ngoài ý muốn.
 - Nếu stack **đang chạy** nhưng port trong env file không khớp port thực tế của stack (ví dụ trước đó bạn start bằng “one-shot” env vars),
   script sẽ FAIL và in ra block `Suggested env updates ...` để bạn copy/paste vào env file cho khớp (tránh accidental recreate + port conflicts).
 - Tip: có thể dùng `--apply-env-updates` để script tự ghi các biến an toàn vào env file (không đụng secrets), gồm port vars và (khi phát hiện overlay đang chạy) `CW_COMPOSE_FILES`:

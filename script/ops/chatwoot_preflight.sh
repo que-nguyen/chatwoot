@@ -201,6 +201,67 @@ else
   check_fail "docker daemon not reachable (check permissions / service status)"
 fi
 
+disk_target="$ROOT_DIR"
+docker_root_dir=""
+if command -v docker >/dev/null 2>&1; then
+  docker_root_dir="$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || true)"
+fi
+if [[ -n "$docker_root_dir" && -d "$docker_root_dir" ]]; then
+  disk_target="$docker_root_dir"
+fi
+
+check_disk_space_gb() {
+  local target="$1"
+  local recommended_gb="$2"
+
+  if ! command -v df >/dev/null 2>&1; then
+    check_warn "df not found; skipping disk check"
+    return 0
+  fi
+
+  local avail_kb=""
+  avail_kb="$(df -Pk "$target" 2>/dev/null | awk 'NR==2 {print $4}' || true)"
+  if [[ -z "$avail_kb" || ! "$avail_kb" =~ ^[0-9]+$ ]]; then
+    check_warn "Could not determine free disk space for '$target'"
+    return 0
+  fi
+
+  local avail_gb=$((avail_kb / 1024 / 1024))
+  if [[ "$avail_gb" -lt "$recommended_gb" ]]; then
+    check_warn "Low disk space: ${avail_gb}GiB available at '$target' (recommended >= ${recommended_gb}GiB)"
+  else
+    check_pass "disk space OK: ${avail_gb}GiB available at '$target'"
+  fi
+}
+
+check_memory_mb() {
+  local recommended_mb="$1"
+
+  local total_mb=""
+  if command -v free >/dev/null 2>&1; then
+    total_mb="$(free -m 2>/dev/null | awk '/^Mem:/ {print $2}' || true)"
+  elif [[ -r /proc/meminfo ]]; then
+    total_mb="$(awk '/^MemTotal:/ {print int($2/1024)}' /proc/meminfo 2>/dev/null || true)"
+  fi
+
+  if [[ -z "$total_mb" || ! "$total_mb" =~ ^[0-9]+$ ]]; then
+    check_warn "Could not determine total RAM; skipping memory check"
+    return 0
+  fi
+
+  local total_gb=$((total_mb / 1024))
+  if [[ "$total_mb" -lt "$recommended_mb" ]]; then
+    check_warn "Low memory: ${total_gb}GiB (${total_mb}MiB) total (recommended >= $((recommended_mb / 1024))GiB)"
+  else
+    check_pass "memory OK: ${total_gb}GiB (${total_mb}MiB) total"
+  fi
+}
+
+# Chatwoot runs Postgres + Redis + Rails. The exact requirements depend on traffic and attachments,
+# but warn early when the host looks too small. We check DockerRootDir because images/volumes live there.
+check_disk_space_gb "$disk_target" 10
+check_memory_mb 2048
+
 if [[ -f "$env_file" ]]; then
   check_pass "env file found: $env_file"
 else
@@ -240,6 +301,17 @@ else
   if [[ "$frontend_url" == *"0.0.0.0"* ]]; then
     check_warn "FRONTEND_URL contains 0.0.0.0 (not suitable for links/emails); use 127.0.0.1/localhost for local or your public domain in production"
   fi
+fi
+
+cw_image_tag="$(get_effective_value CW_IMAGE_TAG "")"
+effective_image_tag="$cw_image_tag"
+if [[ -z "$effective_image_tag" ]]; then
+  effective_image_tag="latest"
+fi
+if [[ -z "$cw_image_tag" || "$cw_image_tag" == "latest" ]]; then
+  check_warn "CW_IMAGE_TAG is not pinned (effective tag: '$effective_image_tag'); recommended to set CW_IMAGE_TAG to a specific version in production"
+else
+  check_pass "CW_IMAGE_TAG pinned ('$effective_image_tag')"
 fi
 
 check_port_free() {
