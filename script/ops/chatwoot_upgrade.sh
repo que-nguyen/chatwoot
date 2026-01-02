@@ -15,6 +15,7 @@ Options:
   --tag TAG               Chatwoot image tag to deploy (sets CW_IMAGE_TAG for this run)
   --apply-env-tag         Write CW_IMAGE_TAG=<tag> into the env file (host-side helper var)
   --skip-backup           Skip pre-upgrade backup (default: run backup if stack is running)
+  --skip-pull             Skip pulling images (useful for local tags / airgapped environments)
   --pull-all              Pull all services (default: only rails/sidekiq/migrate)
   --skip-smoketest        Skip post-upgrade smoketest (default: run Phase 0 smoketest)
   -h, --help              Show this help
@@ -23,6 +24,7 @@ Examples:
   bash script/ops/chatwoot_upgrade.sh --tag 4.9.1
   bash script/ops/chatwoot_upgrade.sh --env-file .env.production --tag 4.9.1
   bash script/ops/chatwoot_upgrade.sh --tag 4.9.1 --apply-env-tag
+  bash script/ops/chatwoot_upgrade.sh --tag local --skip-pull
 EOF
 }
 
@@ -30,6 +32,7 @@ env_file="${CW_ENV_FILE:-.env}"
 tag=""
 apply_env_tag=0
 skip_backup=0
+skip_pull=0
 pull_all=0
 skip_smoketest=0
 
@@ -49,6 +52,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --skip-backup)
       skip_backup=1
+      shift
+      ;;
+    --skip-pull)
+      skip_pull=1
       shift
       ;;
     --pull-all)
@@ -127,12 +134,16 @@ if [[ -n "$container_ids" && "$skip_backup" -eq 0 ]]; then
   CW_ENV_FILE="$env_file" bash script/ops/chatwoot_backup.sh
 fi
 
-if [[ "$pull_all" -eq 1 ]]; then
-  echo "INFO: pulling all services (CW_IMAGE_TAG=$tag)..." >&2
-  CW_IMAGE_TAG="$tag" "${compose[@]}" pull
+if [[ "$skip_pull" -eq 1 ]]; then
+  echo "INFO: skipping image pulls (--skip-pull) (CW_IMAGE_TAG=$tag)..." >&2
 else
-  echo "INFO: pulling Chatwoot services (rails/sidekiq/migrate) (CW_IMAGE_TAG=$tag)..." >&2
-  CW_IMAGE_TAG="$tag" "${compose[@]}" pull rails sidekiq migrate
+  if [[ "$pull_all" -eq 1 ]]; then
+    echo "INFO: pulling all services (CW_IMAGE_TAG=$tag)..." >&2
+    CW_IMAGE_TAG="$tag" "${compose[@]}" pull
+  else
+    echo "INFO: pulling Chatwoot services (rails/sidekiq/migrate) (CW_IMAGE_TAG=$tag)..." >&2
+    CW_IMAGE_TAG="$tag" "${compose[@]}" pull rails sidekiq migrate
+  fi
 fi
 
 echo "INFO: applying upgrade (CW_IMAGE_TAG=$tag)..." >&2

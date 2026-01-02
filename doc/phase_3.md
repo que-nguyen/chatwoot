@@ -102,6 +102,10 @@ PASS nếu Web UI truy cập được:
 Tuỳ chọn (tái lập được): dùng script:
 - `bash script/ops/chatwoot_upgrade.sh --tag 4.9.1`
 
+Ghi chú:
+- Nếu bạn build image local (ví dụ `chatwoot/chatwoot:local`), dùng `--skip-pull` để tránh `docker compose pull` fail:
+  - `bash script/ops/chatwoot_upgrade.sh --tag local --skip-pull`
+
 ### 3.2 Thực hiện upgrade
 Ví dụ upgrade lên một version cụ thể:
 ```sh
