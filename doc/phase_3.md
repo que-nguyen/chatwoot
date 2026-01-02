@@ -18,6 +18,15 @@ Phase này là runbook **sao lưu/khôi phục** và **nâng cấp** cho stack c
 
 ## 1) Backup (khuyến nghị theo thứ tự)
 
+Tuỳ chọn (tái lập được): dùng host script trong repo:
+- `bash script/ops/chatwoot_backup.sh`
+
+Script này sẽ backup:
+- `.env` (nếu tồn tại)
+- Postgres dump (`pg_dump`)
+- `/app/storage` (attachments)
+- dọn backup cũ theo `CW_BACKUP_KEEP_DAYS`
+
 ### 1.1 Backup cấu hình `.env` (quan trọng)
 > `.env` chứa secret. **Không commit**, lưu ở nơi an toàn.
 
@@ -45,6 +54,9 @@ docker compose -f docker-compose.production.yaml exec -T rails \
 
 > CẢNH BÁO: restore sẽ ghi đè dữ liệu. Khuyến nghị làm trên môi trường staging trước.
 
+Tuỳ chọn (khuyến nghị, tái lập được): dùng script:
+- `bash script/ops/chatwoot_restore.sh --yes --pgdump backup/pgdump-....sql.gz --storage backup/storage-....tgz`
+
 ### 2.1 Stop app layer (giữ DB/Redis)
 ```sh
 docker compose -f docker-compose.production.yaml stop rails sidekiq
@@ -68,8 +80,8 @@ gunzip -c backup/pgdump-*.sql.gz | docker compose -f docker-compose.production.y
 
 ### 2.3 Restore storage (attachments)
 ```sh
-cat backup/storage-*.tgz | docker compose -f docker-compose.production.yaml exec -T rails \
-  sh -lc 'mkdir -p /app/storage && tar -xzf - -C /app/storage'
+cat backup/storage-*.tgz | docker compose -f docker-compose.production.yaml run --rm --no-deps -T --entrypoint sh rails -lc \
+  'mkdir -p /app/storage && tar -xzf - -C /app/storage'
 ```
 
 ### 2.4 Start lại stack
@@ -86,6 +98,9 @@ PASS nếu Web UI truy cập được:
 ### 3.1 Chuẩn bị
 - Luôn backup theo mục (1) trước khi upgrade.
 - Nên **pin version** bằng `CW_IMAGE_TAG` trong `.env` (hoặc export khi chạy compose).
+
+Tuỳ chọn (tái lập được): dùng script:
+- `bash script/ops/chatwoot_upgrade.sh --tag 4.9.1`
 
 ### 3.2 Thực hiện upgrade
 Ví dụ upgrade lên một version cụ thể:
