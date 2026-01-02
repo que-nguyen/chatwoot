@@ -9,7 +9,9 @@ This adapter connects Zalo Web (via `zca-js`) to a Chatwoot API inbox.
 
 ## Setup
 1. Create a Chatwoot API inbox and copy its `identifier`.
-2. Set the inbox `webhook_url` to this adapter (example: `http://localhost:3001/webhooks/chatwoot/secret`).
+2. Set the inbox `webhook_url` to this adapter:
+   - Adapter running on host: `http://localhost:3001/webhooks/chatwoot/<secret>`
+   - Adapter running via Docker Compose overlay in this repo: `http://zalo_adapter:3001/webhooks/chatwoot/<secret>`
 3. Install dependencies from this folder:
    - `npm install`
    - Optional (local `zca-js` checkout): `npm install --save file:../../../zca-js`
@@ -18,7 +20,9 @@ This adapter connects Zalo Web (via `zca-js`) to a Chatwoot API inbox.
 
 ## Environment variables
 Required:
-- `CHATWOOT_BASE_URL` (example: `http://localhost:3000`)
+- `CHATWOOT_BASE_URL`
+  - Adapter running on host: `http://localhost:3000`
+  - Adapter running via Docker Compose overlay in this repo: `http://rails:3000`
 - `CHATWOOT_INBOX_IDENTIFIER` (the API channel identifier)
 - `ZALO_IMEI`
 - `ZALO_USER_AGENT`
@@ -57,7 +61,10 @@ are resolved relative to the accounts file directory.
 ## Example .env
 ```bash
 PORT=3001
-CHATWOOT_BASE_URL=http://localhost:3000
+# Adapter running via Docker Compose overlay in this repo:
+CHATWOOT_BASE_URL=http://rails:3000
+# Adapter running on host:
+# CHATWOOT_BASE_URL=http://localhost:3000
 CHATWOOT_INBOX_IDENTIFIER=your_api_inbox_identifier
 CHATWOOT_WEBHOOK_PATH=/webhooks/chatwoot/replace_with_secret
 CHATWOOT_HMAC_TOKEN=
