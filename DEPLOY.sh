@@ -247,7 +247,7 @@ ensure_sane_defaults() {
       local web_port=""
       web_port="$(get_file_value CW_WEB_PORT "")"
       if [[ -z "$web_port" ]]; then
-        web_port="${CW_WEB_PORT:-3000}"
+        web_port="${CW_WEB_PORT:-3003}"
       fi
       set_env_value FRONTEND_URL "http://127.0.0.1:${web_port}/" "$env_file"
     fi

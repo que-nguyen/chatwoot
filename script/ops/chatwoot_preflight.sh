@@ -474,8 +474,8 @@ if [[ "$needs_compose_files_update" -eq 1 ]]; then
   fi
 fi
 
-web_port="$(get_effective_value CW_WEB_PORT "3000")"
-postgres_port="$(get_effective_value CW_POSTGRES_PORT "5432")"
+web_port="$(get_effective_value CW_WEB_PORT "3003")"
+postgres_port="$(get_effective_value CW_POSTGRES_PORT "5433")"
 redis_port="$(get_effective_value CW_REDIS_PORT "6379")"
 
 running_web_port="$(resolve_running_host_port rails 3000 || true)"

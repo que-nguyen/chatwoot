@@ -8,7 +8,7 @@ Tài liệu này hướng dẫn chạy `integrations/zalo_adapter` và cấu hì
 - PASS nếu các service đều `Up`:
   - `docker compose -f docker-compose.production.yaml ps`
 - PASS nếu Web UI trả `200/302`:
-  - `curl -fsS -o /dev/null -w '%{http_code}\\n' "http://127.0.0.1:${CW_WEB_PORT:-3000}/"`
+  - `curl -fsS -o /dev/null -w '%{http_code}\\n' "http://127.0.0.1:${CW_WEB_PORT:-3003}/"`
   - Ghi chú: nếu bạn override `CW_WEB_PORT` theo kiểu one-shot, hãy `export CW_WEB_PORT=...` hoặc thay port trực tiếp trong URL.
 
 ### zca-js dependency
