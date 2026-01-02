@@ -106,6 +106,15 @@ check_warn() {
 
 echo "== Chatwoot Phase 1 smoketest (Zalo adapter) =="
 
+tmp_files=()
+cleanup() {
+  local file=""
+  for file in "${tmp_files[@]}"; do
+    rm -f "$file" || true
+  done
+}
+trap cleanup EXIT
+
 compose_files_value="$(get_effective_value CW_COMPOSE_FILES "")"
 if [[ -z "$compose_files_value" ]]; then
   compose_files_value="docker-compose.production.yaml docker-compose.zalo-adapter.yaml"
@@ -121,7 +130,7 @@ if [[ -z "$wait_interval_seconds" || ! "$wait_interval_seconds" =~ ^[0-9]+$ ]]; 
 fi
 
 health_out="$(mktemp)"
-trap 'rm -f "$health_out"' EXIT
+tmp_files+=("$health_out")
 
 deadline="$(( $(date +%s) + wait_seconds ))"
 attempt=0
@@ -235,13 +244,21 @@ fi
 if [[ -n "$adapter_inbox_identifier" ]]; then
   webhook_test_ruby='identifier = ENV.fetch("SMOKETEST_CHATWOOT_INBOX_IDENTIFIER"); expected = ENV["SMOKETEST_ADAPTER_HMAC_TOKEN"].to_s; channel = Channel::Api.find_by(identifier: identifier); raise("Channel::Api not found for identifier=#{identifier}") unless channel; inbox = channel.inbox; raise("Channel::Api webhook_url is blank") if channel.webhook_url.blank?; if expected.present? && channel.hmac_token != expected; raise("HMAC token mismatch between adapter env and Channel::Api"); end; payload = { event: "message_created", inbox_id: inbox.id, message_type: "outgoing", content: "smoketest", private: false, is_private: false, conversation: { inbox_id: inbox.id, contact_inbox: { source_id: "smoketest" } } }; Webhooks::Trigger.new(channel.webhook_url, payload, :api_inbox_webhook).send(:perform_request); puts "ok"'
 
+  webhook_out="$(mktemp)"
+  tmp_files+=("$webhook_out")
+
   if CW_COMPOSE_FILES="$compose_files_value" \
     script/ops/chatwoot_compose.sh --env-file "$env_file" exec -T \
       -e "SMOKETEST_CHATWOOT_INBOX_IDENTIFIER=$adapter_inbox_identifier" \
       -e "SMOKETEST_ADAPTER_HMAC_TOKEN=$adapter_hmac_token" \
-      rails bundle exec rails runner "$webhook_test_ruby"; then
+      rails bundle exec rails runner "$webhook_test_ruby" >"$webhook_out" 2>&1; then
+    last_line="$(awk 'NF { line = $0 } END { if (line != "") print line }' "$webhook_out")"
+    if [[ -n "$last_line" ]]; then
+      echo "$last_line"
+    fi
     check_pass "Chatwoot -> adapter webhook delivery OK"
   else
+    cat "$webhook_out" >&2
     check_fail "Chatwoot -> adapter webhook delivery failed"
   fi
 fi
