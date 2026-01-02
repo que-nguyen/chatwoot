@@ -16,6 +16,8 @@ Runs a minimal Phase 0 deployment using Docker Compose:
 Options:
   -e, --env-file PATH        Env file (defaults to CW_ENV_FILE or .env)
   --apply-env-updates        Forward to preflight to align ports/overlays with a running stack
+  --strict, --strict-production
+                             Forward to preflight to enforce safer production defaults
   --skip-smoketest           Skip smoketest step
   --follow-logs              Tail logs after `up -d` (Ctrl-C to stop)
 EOF
@@ -23,6 +25,7 @@ EOF
 
 env_file="${CW_ENV_FILE:-.env}"
 apply_env_updates=0
+strict_production=0
 skip_smoketest=0
 follow_logs=0
 
@@ -34,6 +37,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --apply-env-updates)
       apply_env_updates=1
+      shift
+      ;;
+    --strict|--strict-production)
+      strict_production=1
       shift
       ;;
     --skip-smoketest)
@@ -107,6 +114,9 @@ preflight_args=(--env-file "$env_file")
 if [[ "$apply_env_updates" -eq 1 ]]; then
   preflight_args+=(--apply-env-updates)
 fi
+if [[ "$strict_production" -eq 1 ]]; then
+  preflight_args+=(--strict-production)
+fi
 bash script/ops/chatwoot_preflight.sh "${preflight_args[@]}"
 
 script/ops/chatwoot_compose.sh --env-file "$env_file" up -d
@@ -128,4 +138,3 @@ if [[ -n "$frontend_url" ]]; then
 else
   echo "Next: open the Web UI and create the admin user (Phase 0 verification)"
 fi
-

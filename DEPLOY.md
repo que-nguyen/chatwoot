@@ -104,6 +104,11 @@ bash script/ops/chatwoot_preflight.sh --env-file .env.production
 **Pass:** `Preflight OK`  
 **Fail:** sửa theo message (thiếu secret, port conflict, docker daemon, …) rồi chạy lại.
 
+Tip (VPS/prod): dùng strict mode để preflight fail sớm nếu config “không an toàn cho production”:
+```bash
+bash script/ops/chatwoot_preflight.sh --env-file .env.production --strict-production
+```
+
 ## 4) Triển khai stack
 
 ### 4.1 Cách khuyến nghị (1 lệnh)
@@ -202,4 +207,3 @@ script/ops/chatwoot_compose.sh --env-file .env.production logs --tail=300 migrat
 Kết luận theo checklist ở mục **0)**:
 - **CÀI ĐẶT THÀNH CÔNG** khi tất cả tiêu chí PASS đạt.
 - **CHƯA ĐẠT** nếu còn fail, kèm log và nguyên nhân gốc (root cause) + hướng sửa.
-

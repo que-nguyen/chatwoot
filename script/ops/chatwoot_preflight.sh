@@ -12,6 +12,9 @@ Preflight checks for Chatwoot Docker Compose runbooks:
 - Docker + Docker Compose availability
 - Required secrets in env file (SECRET_KEY_BASE, POSTGRES_PASSWORD, REDIS_PASSWORD)
 - Local port conflicts for CW_WEB_PORT/CW_POSTGRES_PORT/CW_REDIS_PORT
+- Optional strict mode to enforce safer production defaults:
+  - Require CW_IMAGE_TAG pinned (not empty/latest)
+  - If Caddy overlay is used: require CADDY_DOMAIN, FORCE_SSL=true, and https FRONTEND_URL
 - Optional overlay checks (when CW_COMPOSE_FILES includes overlay YAMLs):
   - Caddy: CW_CADDY_HTTP_PORT/CW_CADDY_HTTPS_PORT
   - Zalo adapter: ZALO_ADAPTER_HOST_PORT and ZALO_ADAPTER_ENV_FILE presence
@@ -23,11 +26,14 @@ Options:
                       write safe variables into the env file to match the running stack:
                       - CW_*_PORT, ZALO_ADAPTER_HOST_PORT
                       - CW_COMPOSE_FILES (recommended overlays if detected)
+  --strict, --strict-production
+                      Treat production warnings as errors (recommended for VPS/prod)
 EOF
 }
 
 env_file="${CW_ENV_FILE:-.env}"
 apply_env_updates=0
+strict_production=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -e|--env-file)
@@ -36,6 +42,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --apply-env-updates)
       apply_env_updates=1
+      shift
+      ;;
+    --strict|--strict-production)
+      strict_production=1
       shift
       ;;
     -h|--help)
@@ -309,7 +319,11 @@ if [[ -z "$effective_image_tag" ]]; then
   effective_image_tag="latest"
 fi
 if [[ -z "$cw_image_tag" || "$cw_image_tag" == "latest" ]]; then
-  check_warn "CW_IMAGE_TAG is not pinned (effective tag: '$effective_image_tag'); recommended to set CW_IMAGE_TAG to a specific version in production"
+  if [[ "$strict_production" -eq 1 ]]; then
+    check_fail "CW_IMAGE_TAG is not pinned (effective tag: '$effective_image_tag'); set CW_IMAGE_TAG to a specific version for production"
+  else
+    check_warn "CW_IMAGE_TAG is not pinned (effective tag: '$effective_image_tag'); recommended to set CW_IMAGE_TAG to a specific version in production"
+  fi
 else
   check_pass "CW_IMAGE_TAG pinned ('$effective_image_tag')"
 fi
@@ -557,19 +571,35 @@ fi
 caddy_domain="$(get_effective_value CADDY_DOMAIN "")"
 if [[ "$use_caddy" -eq 1 ]]; then
   if [[ -z "$caddy_domain" ]]; then
-    check_warn "CADDY_DOMAIN is missing/empty; Caddy will default to localhost (auto-HTTPS with internal CA). Set CADDY_DOMAIN to your public domain in production"
+    if [[ "$strict_production" -eq 1 ]]; then
+      check_fail "CADDY_DOMAIN is missing/empty while Caddy overlay is enabled; set CADDY_DOMAIN to your public domain for production"
+    else
+      check_warn "CADDY_DOMAIN is missing/empty; Caddy will default to localhost (auto-HTTPS with internal CA). Set CADDY_DOMAIN to your public domain in production"
+    fi
   elif [[ "$caddy_domain" == *"://"* ]]; then
-    check_warn "CADDY_DOMAIN contains scheme; set only hostname to enable TLS (got '$caddy_domain')"
+    if [[ "$strict_production" -eq 1 ]]; then
+      check_fail "CADDY_DOMAIN contains scheme; set only hostname to enable TLS (got '$caddy_domain')"
+    else
+      check_warn "CADDY_DOMAIN contains scheme; set only hostname to enable TLS (got '$caddy_domain')"
+    fi
   fi
 
   force_ssl="$(get_effective_value FORCE_SSL "")"
   force_ssl="$(printf "%s" "$force_ssl" | tr '[:upper:]' '[:lower:]')"
   if [[ -n "$caddy_domain" && "$caddy_domain" != "localhost" && "$caddy_domain" != "127.0.0.1" ]]; then
     if [[ "$force_ssl" != "true" ]]; then
-      check_warn "FORCE_SSL is not true; recommended FORCE_SSL=true when serving Chatwoot behind TLS (Phase 2)"
+      if [[ "$strict_production" -eq 1 ]]; then
+        check_fail "FORCE_SSL is not true; set FORCE_SSL=true when serving Chatwoot behind TLS (Phase 2)"
+      else
+        check_warn "FORCE_SSL is not true; recommended FORCE_SSL=true when serving Chatwoot behind TLS (Phase 2)"
+      fi
     fi
     if [[ -n "$frontend_url" && "$frontend_url" != https://* ]]; then
-      check_warn "FRONTEND_URL is not https while Caddy is enabled; recommended to set FRONTEND_URL=https://$caddy_domain in production"
+      if [[ "$strict_production" -eq 1 ]]; then
+        check_fail "FRONTEND_URL is not https while Caddy is enabled; set FRONTEND_URL=https://$caddy_domain in production"
+      else
+        check_warn "FRONTEND_URL is not https while Caddy is enabled; recommended to set FRONTEND_URL=https://$caddy_domain in production"
+      fi
     fi
   fi
 fi
