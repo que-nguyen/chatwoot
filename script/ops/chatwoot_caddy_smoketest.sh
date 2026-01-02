@@ -117,7 +117,7 @@ fi
 
 domain="$(get_effective_value CADDY_DOMAIN "")"
 if [[ -z "$domain" ]]; then
-  check_fail "CADDY_DOMAIN is missing/empty (required for Phase 2)"
+  check_fail "CADDY_DOMAIN is missing/empty (required for TLS; set CADDY_DOMAIN=localhost for local smoke-test, or your public domain in production)"
 elif [[ "$domain" == *"://"* ]]; then
   check_fail "CADDY_DOMAIN contains scheme; set only hostname to enable TLS (got '$domain')"
 else
@@ -188,4 +188,3 @@ if [[ "$failed" -ne 0 ]]; then
 fi
 
 echo "Smoketest OK"
-

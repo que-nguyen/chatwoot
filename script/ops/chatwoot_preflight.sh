@@ -243,13 +243,13 @@ running_postgres_port="$(resolve_running_host_port postgres 5432 || true)"
 running_redis_port="$(resolve_running_host_port redis 6379 || true)"
 
 if [[ -n "$running_web_port" && "$web_port" =~ ^[0-9]+$ && "$web_port" != "$running_web_port" ]]; then
-  check_warn "CW_WEB_PORT=$web_port does not match the running stack (rails=$running_web_port); set CW_WEB_PORT to avoid accidental recreate/port conflicts"
+  check_fail "CW_WEB_PORT=$web_port does not match the running stack (rails=$running_web_port); set CW_WEB_PORT=$running_web_port to avoid accidental recreate/port conflicts"
 fi
 if [[ -n "$running_postgres_port" && "$postgres_port" =~ ^[0-9]+$ && "$postgres_port" != "$running_postgres_port" ]]; then
-  check_warn "CW_POSTGRES_PORT=$postgres_port does not match the running stack (postgres=$running_postgres_port); set CW_POSTGRES_PORT to avoid accidental recreate/port conflicts"
+  check_fail "CW_POSTGRES_PORT=$postgres_port does not match the running stack (postgres=$running_postgres_port); set CW_POSTGRES_PORT=$running_postgres_port to avoid accidental recreate/port conflicts"
 fi
 if [[ -n "$running_redis_port" && "$redis_port" =~ ^[0-9]+$ && "$redis_port" != "$running_redis_port" ]]; then
-  check_warn "CW_REDIS_PORT=$redis_port does not match the running stack (redis=$running_redis_port); set CW_REDIS_PORT to avoid accidental recreate/port conflicts"
+  check_fail "CW_REDIS_PORT=$redis_port does not match the running stack (redis=$running_redis_port); set CW_REDIS_PORT=$running_redis_port to avoid accidental recreate/port conflicts"
 fi
 
 check_port_free "$web_port" "CW_WEB_PORT" "$running_web_port"
@@ -264,10 +264,10 @@ if [[ "$use_caddy" -eq 1 ]]; then
   running_caddy_https_port="$(resolve_running_host_port caddy 443 || true)"
 
   if [[ -n "$running_caddy_http_port" && "$caddy_http_port" =~ ^[0-9]+$ && "$caddy_http_port" != "$running_caddy_http_port" ]]; then
-    check_warn "CW_CADDY_HTTP_PORT=$caddy_http_port does not match the running stack (caddy=$running_caddy_http_port); set CW_CADDY_HTTP_PORT to avoid accidental recreate/port conflicts"
+    check_fail "CW_CADDY_HTTP_PORT=$caddy_http_port does not match the running stack (caddy=$running_caddy_http_port); set CW_CADDY_HTTP_PORT=$running_caddy_http_port to avoid accidental recreate/port conflicts"
   fi
   if [[ -n "$running_caddy_https_port" && "$caddy_https_port" =~ ^[0-9]+$ && "$caddy_https_port" != "$running_caddy_https_port" ]]; then
-    check_warn "CW_CADDY_HTTPS_PORT=$caddy_https_port does not match the running stack (caddy=$running_caddy_https_port); set CW_CADDY_HTTPS_PORT to avoid accidental recreate/port conflicts"
+    check_fail "CW_CADDY_HTTPS_PORT=$caddy_https_port does not match the running stack (caddy=$running_caddy_https_port); set CW_CADDY_HTTPS_PORT=$running_caddy_https_port to avoid accidental recreate/port conflicts"
   fi
 
   check_port_free "$caddy_http_port" "CW_CADDY_HTTP_PORT" "$running_caddy_http_port"
@@ -279,7 +279,7 @@ if [[ "$use_zalo_adapter" -eq 1 ]]; then
   running_zalo_port="$(resolve_running_host_port zalo_adapter 3001 || true)"
 
   if [[ -n "$running_zalo_port" && "$zalo_host_port" =~ ^[0-9]+$ && "$zalo_host_port" != "$running_zalo_port" ]]; then
-    check_warn "ZALO_ADAPTER_HOST_PORT=$zalo_host_port does not match the running stack (zalo_adapter=$running_zalo_port); set ZALO_ADAPTER_HOST_PORT to avoid accidental recreate/port conflicts"
+    check_fail "ZALO_ADAPTER_HOST_PORT=$zalo_host_port does not match the running stack (zalo_adapter=$running_zalo_port); set ZALO_ADAPTER_HOST_PORT=$running_zalo_port to avoid accidental recreate/port conflicts"
   fi
 
   check_port_free "$zalo_host_port" "ZALO_ADAPTER_HOST_PORT" "$running_zalo_port"
