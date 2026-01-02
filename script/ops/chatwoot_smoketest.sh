@@ -99,11 +99,40 @@ check_warn() {
 
 echo "== Chatwoot smoketest =="
 
-if CW_ENV_FILE="$env_file" bash script/ops/chatwoot_healthcheck.sh; then
-  check_pass "compose services running/healthy"
-else
-  check_fail "compose services unhealthy (see output above; try: docker compose ps/logs)"
+wait_seconds="$(get_effective_value CW_SMOKETEST_WAIT_SECONDS "60")"
+wait_interval_seconds="$(get_effective_value CW_SMOKETEST_WAIT_INTERVAL_SECONDS "3")"
+if [[ -z "$wait_seconds" || ! "$wait_seconds" =~ ^[0-9]+$ ]]; then
+  wait_seconds="60"
 fi
+if [[ -z "$wait_interval_seconds" || ! "$wait_interval_seconds" =~ ^[0-9]+$ ]]; then
+  wait_interval_seconds="3"
+fi
+
+health_out="$(mktemp)"
+trap 'rm -f "$health_out"' EXIT
+
+deadline="$(( $(date +%s) + wait_seconds ))"
+attempt=0
+while true; do
+  attempt="$((attempt + 1))"
+  if CW_ENV_FILE="$env_file" bash script/ops/chatwoot_healthcheck.sh >"$health_out" 2>&1; then
+    cat "$health_out"
+    check_pass "compose services running/healthy"
+    break
+  fi
+
+  if [[ "$attempt" -eq 1 && "$wait_seconds" -gt 0 ]]; then
+    check_warn "compose services not healthy yet; waiting up to ${wait_seconds}s..."
+  fi
+
+  if [[ "$wait_seconds" -eq 0 || "$(date +%s)" -ge "$deadline" ]]; then
+    cat "$health_out" >&2
+    check_fail "compose services unhealthy (see output above; try: docker compose ps/logs)"
+    break
+  fi
+
+  sleep "$wait_interval_seconds"
+done
 
 web_port=""
 compose_port_line="$(CW_ENV_FILE="$env_file" script/ops/chatwoot_compose.sh port rails 3000 2>/dev/null | head -n 1 || true)"

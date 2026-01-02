@@ -77,6 +77,17 @@ get_effective_value() {
   printf "%s" "$default"
 }
 
+# When callers use `--env-file`, they almost always want containers to use the
+# same env file via compose's `env_file:` (driven by CW_ENV_FILE). Auto-align
+# unless CW_ENV_FILE is explicitly set in the environment or env file.
+cw_env_file_value="$(get_effective_value CW_ENV_FILE "")"
+if [[ -z "$cw_env_file_value" && -f "$env_file" ]]; then
+  export CW_ENV_FILE="$env_file"
+  if [[ "$env_file" != ".env" ]]; then
+    echo "INFO: CW_ENV_FILE not set; using '$env_file' for service env_file (set CW_ENV_FILE to override)" >&2
+  fi
+fi
+
 compose_files=()
 compose_files_value="$(get_effective_value CW_COMPOSE_FILES "")"
 if [[ -n "$compose_files_value" ]]; then

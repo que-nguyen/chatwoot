@@ -111,11 +111,40 @@ if [[ -z "$compose_files_value" ]]; then
   compose_files_value="docker-compose.production.yaml docker-compose.zalo-adapter.yaml"
 fi
 
-if CW_ENV_FILE="$env_file" CW_COMPOSE_FILES="$compose_files_value" bash script/ops/chatwoot_healthcheck.sh; then
-  check_pass "compose services running/healthy"
-else
-  check_fail "compose services unhealthy (see output above)"
+wait_seconds="$(get_effective_value CW_SMOKETEST_WAIT_SECONDS "60")"
+wait_interval_seconds="$(get_effective_value CW_SMOKETEST_WAIT_INTERVAL_SECONDS "3")"
+if [[ -z "$wait_seconds" || ! "$wait_seconds" =~ ^[0-9]+$ ]]; then
+  wait_seconds="60"
 fi
+if [[ -z "$wait_interval_seconds" || ! "$wait_interval_seconds" =~ ^[0-9]+$ ]]; then
+  wait_interval_seconds="3"
+fi
+
+health_out="$(mktemp)"
+trap 'rm -f "$health_out"' EXIT
+
+deadline="$(( $(date +%s) + wait_seconds ))"
+attempt=0
+while true; do
+  attempt="$((attempt + 1))"
+  if CW_ENV_FILE="$env_file" CW_COMPOSE_FILES="$compose_files_value" bash script/ops/chatwoot_healthcheck.sh >"$health_out" 2>&1; then
+    cat "$health_out"
+    check_pass "compose services running/healthy"
+    break
+  fi
+
+  if [[ "$attempt" -eq 1 && "$wait_seconds" -gt 0 ]]; then
+    check_warn "compose services not healthy yet; waiting up to ${wait_seconds}s..."
+  fi
+
+  if [[ "$wait_seconds" -eq 0 || "$(date +%s)" -ge "$deadline" ]]; then
+    cat "$health_out" >&2
+    check_fail "compose services unhealthy (see output above)"
+    break
+  fi
+
+  sleep "$wait_interval_seconds"
+done
 
 adapter_port=""
 compose_port_line="$(
@@ -222,4 +251,3 @@ if [[ "$failed" -ne 0 ]]; then
 fi
 
 echo "Smoketest OK"
-
