@@ -251,7 +251,15 @@ EOF
 
   run "${sudo_cmd[@]}" install -m 0640 "$tmp" "$ops_env_path"
   rm -f "$tmp"
-  echo "Wrote ops env file: $ops_env_path" >&2
+  if [[ "$dry_run" -eq 1 ]]; then
+    if [[ -f "$ops_env_path" ]]; then
+      echo "DRY RUN: would overwrite ops env file: $ops_env_path" >&2
+    else
+      echo "DRY RUN: would write ops env file: $ops_env_path" >&2
+    fi
+  else
+    echo "Wrote ops env file: $ops_env_path" >&2
+  fi
 fi
 
 run "${sudo_cmd[@]}" systemctl daemon-reload
