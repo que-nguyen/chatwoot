@@ -232,6 +232,16 @@ else
   check_pass "REDIS_PASSWORD present"
 fi
 
+frontend_url="$(get_effective_value FRONTEND_URL "")"
+if [[ -z "$frontend_url" ]]; then
+  check_fail "FRONTEND_URL is missing/empty"
+else
+  check_pass "FRONTEND_URL present"
+  if [[ "$frontend_url" == *"0.0.0.0"* ]]; then
+    check_warn "FRONTEND_URL contains 0.0.0.0 (not suitable for links/emails); use 127.0.0.1/localhost for local or your public domain in production"
+  fi
+fi
+
 check_port_free() {
   local port="$1"
   local label="$2"
@@ -478,6 +488,17 @@ if [[ "$use_caddy" -eq 1 ]]; then
     check_warn "CADDY_DOMAIN is missing/empty; Caddy will default to localhost (auto-HTTPS with internal CA). Set CADDY_DOMAIN to your public domain in production"
   elif [[ "$caddy_domain" == *"://"* ]]; then
     check_warn "CADDY_DOMAIN contains scheme; set only hostname to enable TLS (got '$caddy_domain')"
+  fi
+
+  force_ssl="$(get_effective_value FORCE_SSL "")"
+  force_ssl="$(printf "%s" "$force_ssl" | tr '[:upper:]' '[:lower:]')"
+  if [[ -n "$caddy_domain" && "$caddy_domain" != "localhost" && "$caddy_domain" != "127.0.0.1" ]]; then
+    if [[ "$force_ssl" != "true" ]]; then
+      check_warn "FORCE_SSL is not true; recommended FORCE_SSL=true when serving Chatwoot behind TLS (Phase 2)"
+    fi
+    if [[ -n "$frontend_url" && "$frontend_url" != https://* ]]; then
+      check_warn "FRONTEND_URL is not https while Caddy is enabled; recommended to set FRONTEND_URL=https://$caddy_domain in production"
+    fi
   fi
 fi
 
