@@ -14,6 +14,8 @@ Các tài liệu trong thư mục này là runbook triển khai/vận hành Chat
   File: `doc/phase_3.md`
 - **Phase 4**: Monitoring + Automated Backups (prod)  
   File: `doc/phase_4.md`
+- **Status**: Ghi nhận lần chạy/verify gần nhất (không chứa secrets)  
+  File: `doc/status.md`
 
 ## Ghi chú overlay (tránh orphan containers)
 
