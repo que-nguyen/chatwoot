@@ -68,6 +68,17 @@ Repo đã có unit templates:
 - `script/ops/systemd/chatwoot-backup.service`
 - `script/ops/systemd/chatwoot-backup.timer`
 
+Tuỳ chọn nhanh (khuyến nghị): chạy installer trong repo (cài **cả** backup + healthcheck timers):
+```sh
+bash script/ops/chatwoot_systemd_install.sh --compose-files "docker-compose.production.yaml docker-compose.caddy.yaml"
+```
+
+Ghi chú:
+- Script sẽ tạo `/etc/chatwoot/ops.env` nếu chưa có; nếu file đã tồn tại, script sẽ không overwrite trừ khi dùng `--overwrite-env`.
+- Để chỉ cài backup timer: thêm `--backup-only`.
+
+Cài thủ công (nếu không dùng installer):
+
 1) Copy units lên host:
 ```sh
 sudo cp script/ops/systemd/chatwoot-backup.service /etc/systemd/system/chatwoot-backup.service
@@ -136,6 +147,13 @@ Gợi ý: chạy script theo lịch (cron/systemd timer) mỗi 1–5 phút để
 Repo đã có unit templates:
 - `script/ops/systemd/chatwoot-healthcheck.service`
 - `script/ops/systemd/chatwoot-healthcheck.timer`
+
+Tuỳ chọn nhanh:
+- Nếu bạn **chưa** cài timer nào: dùng installer (cài **cả** backup + healthcheck timers) ở mục (1.4).
+- Nếu bạn chỉ muốn cài healthcheck timer:
+```sh
+bash script/ops/chatwoot_systemd_install.sh --healthcheck-only
+```
 
 1) Copy units lên host:
 ```sh
