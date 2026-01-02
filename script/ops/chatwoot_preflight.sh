@@ -574,6 +574,51 @@ if [[ "$use_caddy" -eq 1 ]]; then
   fi
 fi
 
+firewall_checked=0
+
+check_firewall_notice() {
+  local ports=("$@")
+
+  if command -v ufw >/dev/null 2>&1; then
+    firewall_checked=1
+    ufw_out="$(ufw status 2>/dev/null || true)"
+    if [[ -z "$ufw_out" ]]; then
+      check_warn "ufw detected, but unable to read status (try: sudo ufw status). Ensure required ports are allowed"
+    elif printf "%s" "$ufw_out" | grep -qi "^Status:[[:space:]]*active"; then
+      if [[ "${#ports[@]}" -gt 0 ]]; then
+        check_warn "ufw is active; ensure required ports are allowed: ${ports[*]}/tcp"
+      else
+        check_warn "ufw is active; ensure required ports are allowed for your deployment"
+      fi
+    else
+      check_pass "ufw not active"
+    fi
+  fi
+
+  if command -v firewall-cmd >/dev/null 2>&1; then
+    firewall_checked=1
+    fw_state="$(firewall-cmd --state 2>/dev/null || true)"
+    if [[ "$fw_state" == "running" ]]; then
+      if [[ "${#ports[@]}" -gt 0 ]]; then
+        check_warn "firewalld is running; ensure required ports are allowed: ${ports[*]}/tcp"
+      else
+        check_warn "firewalld is running; ensure required ports are allowed for your deployment"
+      fi
+    else
+      check_pass "firewalld not running"
+    fi
+  fi
+}
+
+if [[ "$use_caddy" -eq 1 ]]; then
+  check_firewall_notice "$caddy_http_port" "$caddy_https_port"
+else
+  check_firewall_notice
+fi
+if [[ "$firewall_checked" -eq 0 ]]; then
+  check_warn "Firewall tool not detected (ufw/firewalld). If deploying on a VPS/cloud, ensure security group rules allow required ports"
+fi
+
 if [[ "${#suggested_env_updates[@]}" -gt 0 ]]; then
   echo
   echo "Suggested env updates (paste into your env file to match the running stack):"
