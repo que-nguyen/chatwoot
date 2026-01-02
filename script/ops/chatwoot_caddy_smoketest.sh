@@ -11,7 +11,7 @@ Usage: bash script/ops/chatwoot_caddy_smoketest.sh [--env-file PATH]
 Runs a minimal Phase 2 smoke test (Caddy TLS overlay):
 - Compose services running/healthy (via script/ops/chatwoot_healthcheck.sh)
 - HTTP proxy reachable via Caddy (Host-based)
-- HTTPS proxy reachable via Caddy (SNI via curl --resolve)
+- HTTPS proxy reachable via Caddy (SNI via curl --resolve; TLS verified for non-local domains)
 
 Notes:
 - Requires Phase 0 stack running and the Caddy overlay started.
@@ -212,8 +212,14 @@ if command -v curl >/dev/null 2>&1; then
       check_fail "HTTP proxy not OK (127.0.0.1:${http_port} Host:${domain} -> $http_code; expected 2xx/3xx)"
     fi
 
+    curl_tls_args=()
+    # For localhost Caddy often serves with an internal CA; allow insecure mode.
+    if [[ "$domain" == "localhost" || "$domain" == "127.0.0.1" || "$domain" == "::1" || "$domain" == *.localhost ]]; then
+      curl_tls_args+=(-k)
+    fi
+
     https_code="$(
-      curl -k -sS -o /dev/null -w '%{http_code}' \
+      curl "${curl_tls_args[@]}" -sS -o /dev/null -w '%{http_code}' \
         --resolve "${domain}:${https_port}:127.0.0.1" \
         "https://${domain}:${https_port}/" || true
     )"

@@ -70,6 +70,9 @@ Tuỳ chọn (chạy nhanh, tái lập được): smoke-test Phase 2 (Caddy reve
 
 PASS nếu script in `Smoketest OK` (exit code `0`).
 
+Ghi chú:
+- Nếu `CADDY_DOMAIN` là domain public (không phải `localhost`/`*.localhost`), script sẽ **verify TLS cert** (không dùng `curl -k`) để bắt lỗi ACME/certificate sớm.
+
 ### 3.1 HTTP/HTTPS trả về từ reverse proxy
 - PASS nếu HTTP trả `200/302` (tuỳ cấu hình redirect):
   - `curl -fsS -o /dev/null -w '%{http_code}\\n' "http://chatwoot.example.com/"`
