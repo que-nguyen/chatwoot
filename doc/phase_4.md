@@ -40,6 +40,11 @@ Script này sẽ:
 bash script/ops/chatwoot_backup.sh
 ```
 
+(Tuỳ chọn) chỉ rõ env file:
+```sh
+bash script/ops/chatwoot_backup.sh --env-file .env.production
+```
+
 - PASS nếu tạo được các file và size > 0:
   - `ls -lh backup/pgdump-*.sql.gz backup/storage-*.tgz backup/env-*.env`
 
@@ -148,6 +153,11 @@ bash script/ops/chatwoot_healthcheck.sh
 echo $?
 ```
 
+(Tuỳ chọn) chỉ rõ env file:
+```sh
+bash script/ops/chatwoot_healthcheck.sh --env-file .env.production
+```
+
 - PASS nếu exit code `0`.
 
 ### 2.2 Alert qua webhook (tuỳ chọn)
@@ -158,7 +168,7 @@ Set biến môi trường:
 
 Ví dụ (Discord):
 ```sh
-CW_ALERT_WEBHOOK_MODE=discord CW_ALERT_WEBHOOK_URL="https://..." bash script/ops/chatwoot_healthcheck.sh
+CW_ALERT_WEBHOOK_MODE=discord CW_ALERT_WEBHOOK_URL="https://..." bash script/ops/chatwoot_healthcheck.sh --env-file .env.production
 ```
 
 Gợi ý: chạy script theo lịch (cron/systemd timer) mỗi 1–5 phút để có alert sớm.

@@ -6,11 +6,61 @@ umask 077
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
+usage() {
+  cat <<'EOF'
+Usage: bash script/ops/chatwoot_backup.sh [options]
+
+Runs a host-side backup for the Chatwoot Docker Compose stack:
+- Copies the env file (if present)
+- Dumps Postgres (pg_dump) to backup/pgdump-*.sql.gz
+- Archives /app/storage to backup/storage-*.tgz
+- Cleans up old backups (optional)
+
+Options:
+  -e, --env-file PATH     Env file used by compose and backed up (default: CW_ENV_FILE or .env)
+  --backup-dir PATH       Output directory (default: CW_BACKUP_DIR or backup)
+  --keep-days N           Retention days (default: CW_BACKUP_KEEP_DAYS or 14)
+  -h, --help              Show help
+EOF
+}
+
 timestamp="$(date +%F-%H%M%S)"
 
 backup_dir="${CW_BACKUP_DIR:-backup}"
 keep_days="${CW_BACKUP_KEEP_DAYS:-14}"
 env_file="${CW_ENV_FILE:-.env}"
+env_file_explicit=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -e|--env-file)
+      env_file="${2:-}"
+      env_file_explicit=1
+      shift 2
+      ;;
+    --backup-dir)
+      backup_dir="${2:-}"
+      shift 2
+      ;;
+    --keep-days)
+      keep_days="${2:-}"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "ERROR: unknown argument: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+if [[ "$env_file_explicit" -eq 1 ]]; then
+  export CW_ENV_FILE="$env_file"
+fi
 
 compose=(script/ops/chatwoot_compose.sh --env-file "$env_file")
 

@@ -159,7 +159,7 @@ script/ops/chatwoot_compose.sh --env-file .env.production logs --tail=200 rails 
 Healthcheck tổng:
 
 ```bash
-CW_ENV_FILE=.env.production bash script/ops/chatwoot_healthcheck.sh
+bash script/ops/chatwoot_healthcheck.sh --env-file .env.production
 ```
 
 Restart stack và xác nhận dữ liệu không mất:

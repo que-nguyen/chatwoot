@@ -115,7 +115,7 @@ deadline="$(( $(date +%s) + wait_seconds ))"
 attempt=0
 while true; do
   attempt="$((attempt + 1))"
-  if CW_ENV_FILE="$env_file" bash script/ops/chatwoot_healthcheck.sh >"$health_out" 2>&1; then
+  if bash script/ops/chatwoot_healthcheck.sh --env-file "$env_file" >"$health_out" 2>&1; then
     cat "$health_out"
     check_pass "compose services running/healthy"
     break

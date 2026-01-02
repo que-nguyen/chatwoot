@@ -131,7 +131,7 @@ compose=(script/ops/chatwoot_compose.sh --env-file "$env_file")
 container_ids="$("${compose[@]}" ps -q 2>/dev/null || true)"
 if [[ -n "$container_ids" && "$skip_backup" -eq 0 ]]; then
   echo "INFO: running pre-upgrade backup (set --skip-backup to disable)..." >&2
-  CW_ENV_FILE="$env_file" bash script/ops/chatwoot_backup.sh
+  bash script/ops/chatwoot_backup.sh --env-file "$env_file"
 fi
 
 if [[ "$skip_pull" -eq 1 ]]; then
