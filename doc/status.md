@@ -8,6 +8,10 @@ Last verified: 2026-01-02
   - WARN: `CW_IMAGE_TAG` not pinned (effective tag: `latest`)
   - WARN: `CADDY_DOMAIN` unset (defaults to `localhost`, internal CA)
   - WARN: `ufw` detected but status unreadable without sudo; ensure required ports are allowed (especially `80/443` when using Caddy)
+- Preflight (strict production): `bash script/ops/chatwoot_preflight.sh --env-file .env --strict-production` (FAIL)
+  - FAIL: `CW_IMAGE_TAG` not pinned (effective tag: `latest`)
+  - FAIL: `CADDY_DOMAIN` missing/empty while Caddy overlay is enabled
+  - NOTE: once `CADDY_DOMAIN` is set to a public hostname, strict mode will also require `FORCE_SSL=true` and `FRONTEND_URL=https://$CADDY_DOMAIN`
 - Phase 0 smoketest: `bash script/ops/chatwoot_smoketest.sh --env-file .env` (OK)
 - Phase 1 smoketest (Zalo adapter): `bash script/ops/chatwoot_zalo_smoketest.sh --env-file .env` (OK)
 - Phase 2 smoketest (Caddy): `bash script/ops/chatwoot_caddy_smoketest.sh --env-file .env` (OK)
@@ -28,4 +32,4 @@ Last verified: 2026-01-02
 ## Next
 
 - Phase 4 (VPS): install/enable system-scope systemd timers (requires root/sudo): `bash script/ops/chatwoot_systemd_install.sh` + `bash script/ops/chatwoot_systemd_smoketest.sh`
-- Production hardening: pin `CW_IMAGE_TAG`, set `CADDY_DOMAIN`, and confirm firewall rules for public access
+- Production hardening: pin `CW_IMAGE_TAG`, set `CADDY_DOMAIN` (+ `FORCE_SSL=true` and `FRONTEND_URL=https://$CADDY_DOMAIN`), confirm firewall rules, then re-run strict preflight until OK
