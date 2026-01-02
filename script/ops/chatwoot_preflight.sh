@@ -20,8 +20,9 @@ The env file defaults to CW_ENV_FILE or .env.
 
 Options:
   --apply-env-updates  If the stack is already running with different host ports,
-                      write safe port variables (CW_*_PORT, ZALO_ADAPTER_HOST_PORT)
-                      into the env file to match the running stack.
+                      write safe variables into the env file to match the running stack:
+                      - CW_*_PORT, ZALO_ADAPTER_HOST_PORT
+                      - CW_COMPOSE_FILES (recommended overlays if detected)
 EOF
 }
 
@@ -297,6 +298,8 @@ detect_running_services() {
 running_services="$(detect_running_services)"
 running_has_caddy=0
 running_has_zalo_adapter=0
+missing_caddy_compose=0
+missing_zalo_adapter_compose=0
 
 if grep -qx "caddy" <<<"$running_services"; then
   running_has_caddy=1
@@ -306,13 +309,73 @@ if grep -qx "zalo_adapter" <<<"$running_services"; then
 fi
 
 if [[ "$running_has_caddy" -eq 1 && "$use_caddy" -eq 0 ]]; then
+  missing_caddy_compose=1
   check_warn "Detected running service 'caddy' but CW_COMPOSE_FILES does not include docker-compose.caddy.yaml (include it to avoid orphan containers)"
   use_caddy=1
 fi
 
 if [[ "$running_has_zalo_adapter" -eq 1 && "$use_zalo_adapter" -eq 0 ]]; then
+  missing_zalo_adapter_compose=1
   check_warn "Detected running service 'zalo_adapter' but CW_COMPOSE_FILES does not include docker-compose.zalo-adapter.yaml (include it to avoid orphan containers)"
   use_zalo_adapter=1
+fi
+
+has_production_compose=0
+for file in "${compose_files[@]}"; do
+  if [[ "$file" == *docker-compose.production.yaml ]]; then
+    has_production_compose=1
+    break
+  fi
+done
+
+if [[ -n "$compose_files_value" && "$has_production_compose" -eq 0 ]]; then
+  check_warn "CW_COMPOSE_FILES does not include docker-compose.production.yaml (runbooks assume it; include it to avoid missing core services)"
+fi
+
+needs_compose_files_update=0
+if [[ "$missing_caddy_compose" -eq 1 || "$missing_zalo_adapter_compose" -eq 1 ]]; then
+  needs_compose_files_update=1
+fi
+if [[ -n "$compose_files_value" && "$has_production_compose" -eq 0 ]]; then
+  needs_compose_files_update=1
+fi
+
+if [[ "$needs_compose_files_update" -eq 1 ]]; then
+  recommended_compose_files=()
+
+  add_compose_file() {
+    local candidate="$1"
+    local existing=""
+
+    [[ -z "$candidate" ]] && return 0
+
+    for existing in "${recommended_compose_files[@]}"; do
+      if [[ "$existing" == "$candidate" ]]; then
+        return 0
+      fi
+    done
+
+    recommended_compose_files+=("$candidate")
+  }
+
+  if [[ -f docker-compose.production.yaml ]]; then
+    add_compose_file "docker-compose.production.yaml"
+  fi
+  for file in "${compose_files[@]}"; do
+    add_compose_file "$file"
+  done
+
+  if [[ "$running_has_zalo_adapter" -eq 1 && -f docker-compose.zalo-adapter.yaml ]]; then
+    add_compose_file "docker-compose.zalo-adapter.yaml"
+  fi
+  if [[ "$running_has_caddy" -eq 1 && -f docker-compose.caddy.yaml ]]; then
+    add_compose_file "docker-compose.caddy.yaml"
+  fi
+
+  recommended_compose_files_value="${recommended_compose_files[*]}"
+  if [[ -n "$recommended_compose_files_value" ]]; then
+    suggested_env_updates+=("CW_COMPOSE_FILES=\"$recommended_compose_files_value\"")
+  fi
 fi
 
 web_port="$(get_effective_value CW_WEB_PORT "3000")"
@@ -410,8 +473,12 @@ if [[ "$use_zalo_adapter" -eq 1 ]]; then
 fi
 
 caddy_domain="$(get_effective_value CADDY_DOMAIN "")"
-if [[ -n "$caddy_domain" && "$caddy_domain" == *"://"* ]]; then
-  check_warn "CADDY_DOMAIN contains scheme; set only hostname to enable TLS (got '$caddy_domain')"
+if [[ "$use_caddy" -eq 1 ]]; then
+  if [[ -z "$caddy_domain" ]]; then
+    check_warn "CADDY_DOMAIN is missing/empty; Caddy will default to http://localhost (HTTP-only). Set CADDY_DOMAIN (hostname only) to enable TLS"
+  elif [[ "$caddy_domain" == *"://"* ]]; then
+    check_warn "CADDY_DOMAIN contains scheme; set only hostname to enable TLS (got '$caddy_domain')"
+  fi
 fi
 
 if [[ "${#suggested_env_updates[@]}" -gt 0 ]]; then
