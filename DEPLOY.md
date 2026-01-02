@@ -114,8 +114,10 @@ bash script/ops/chatwoot_preflight.sh --env-file .env.production --strict-produc
 ### 4.1 Cách khuyến nghị (1 lệnh)
 
 ```bash
-bash script/ops/chatwoot_deploy.sh --env-file .env.production
+bash DEPLOY.sh
 ```
+
+Script này sẽ tự tạo `.env.production` từ `.env.example` (nếu chưa có) và generate các secret bắt buộc trước khi deploy.
 
 ### 4.2 Cách thủ công
 
