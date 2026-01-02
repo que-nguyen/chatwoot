@@ -75,10 +75,10 @@ bash script/ops/chatwoot_systemd_install.sh --compose-files "docker-compose.prod
 
 Ghi chú:
 - Mặc định installer cài **system-scope** units vào `/etc/systemd/system` và cần root/sudo (phù hợp VPS).
-- Nếu bạn không có sudo (local/dev), dùng `--user` để cài **user-scope** units vào `~/.config/systemd/user` (env file: `~/.config/chatwoot/ops.env`):
+- Nếu bạn không có sudo (local/dev), dùng `--user` để cài **user-scope** units vào `$XDG_CONFIG_HOME/systemd/user` (default: `~/.config/systemd/user`) (env file: `$XDG_CONFIG_HOME/chatwoot/ops.env`, default: `~/.config/chatwoot/ops.env`):
   - `bash script/ops/chatwoot_systemd_install.sh --user`
   - `bash script/ops/chatwoot_systemd_smoketest.sh --user`
-- Script sẽ tạo env file nếu chưa có (`/etc/chatwoot/ops.env` hoặc `~/.config/chatwoot/ops.env` với `--user`); nếu file đã tồn tại, script sẽ không overwrite trừ khi dùng `--overwrite-env`.
+- Script sẽ tạo env file nếu chưa có (`/etc/chatwoot/ops.env` hoặc `$XDG_CONFIG_HOME/chatwoot/ops.env` (default: `~/.config/chatwoot/ops.env`) với `--user`); nếu file đã tồn tại, script sẽ không overwrite trừ khi dùng `--overwrite-env`.
 - Để chỉ cài backup timer: thêm `--backup-only`.
 
 Cài thủ công (nếu không dùng installer):

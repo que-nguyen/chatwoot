@@ -13,8 +13,8 @@ Install and enable systemd timers for Chatwoot ops scripts:
 - chatwoot-healthcheck.timer (periodic healthcheck + optional webhook alert)
 
 This script:
-1) Installs unit files into /etc/systemd/system/ (or ~/.config/systemd/user/ with --user)
-2) Creates /etc/chatwoot/ops.env (or ~/.config/chatwoot/ops.env with --user; only if missing unless --overwrite-env)
+1) Installs unit files into /etc/systemd/system/ (or $XDG_CONFIG_HOME/systemd/user (default: ~/.config/systemd/user) with --user)
+2) Creates /etc/chatwoot/ops.env (or $XDG_CONFIG_HOME/chatwoot/ops.env (default: ~/.config/chatwoot/ops.env) with --user; only if missing unless --overwrite-env)
 3) (Optional) Enables timers
 
 Options:
