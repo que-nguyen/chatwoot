@@ -112,8 +112,8 @@ Nếu compose báo `Found orphan containers (...)`:
 - Fix: include đầy đủ các file overlay tương ứng trong mọi lệnh `docker compose`, hoặc cleanup orphan containers bằng:
   - `docker compose -f docker-compose.production.yaml down --remove-orphans`
 
-Tuỳ chọn (khuyến nghị production): **pin version Chatwoot image** để tránh upgrade ngoài ý muốn:
-- `CW_IMAGE_TAG=4.9.1 docker compose -f docker-compose.production.yaml up -d`
+Tuỳ chọn: set `CW_IMAGE_TAG` (mặc định `latest`). Nếu một tag cụ thể bị lỗi `manifest ... not found`, dùng `latest`:
+- `CW_IMAGE_TAG=latest docker compose -f docker-compose.production.yaml up -d`
 
 Ghi chú:
 - Compose có service `migrate` chạy `rails db:chatwoot_prepare` rồi mới start `rails` + `sidekiq` để tránh crash loop do thiếu migrations.

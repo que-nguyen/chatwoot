@@ -262,14 +262,6 @@ ensure_sane_defaults() {
       set_env_value CW_IMAGE_TAG "$CW_IMAGE_TAG" "$env_file"
       current_image_tag="$CW_IMAGE_TAG"
     fi
-    if [[ -z "$current_image_tag" && -f VERSION_CW ]]; then
-      local version=""
-      version="$(trim "$(cat VERSION_CW || true)")"
-      if [[ -n "$version" ]]; then
-        echo "INFO: setting CW_IMAGE_TAG=$version (from VERSION_CW)"
-        set_env_value CW_IMAGE_TAG "$version" "$env_file"
-      fi
-    fi
   fi
 }
 

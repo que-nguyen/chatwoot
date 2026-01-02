@@ -77,7 +77,7 @@ openssl rand -hex 24  # REDIS_PASSWORD
 
 ### 2.3 Biến quan trọng nên set cho production
 
-- `CW_IMAGE_TAG`: pin version image (không dùng `latest` cho production)
+- `CW_IMAGE_TAG`: tuỳ chọn; mặc định `latest`. Nếu pin version mà gặp lỗi `manifest unknown`, đổi về `latest` hoặc bỏ biến này.
 - `ENABLE_ACCOUNT_SIGNUP=false`: chặn self-signup (tùy chính sách)
 - `FORCE_SSL=true`: khi chạy sau reverse proxy TLS (HTTPS / Caddy)
 

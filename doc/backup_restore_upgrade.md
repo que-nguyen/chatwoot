@@ -133,23 +133,23 @@ PASS nếu Web UI truy cập được:
 - Nên **pin version** bằng `CW_IMAGE_TAG` trong `.env` (hoặc export khi chạy compose).
 
 Tuỳ chọn (tái lập được): dùng script:
-- `bash script/ops/chatwoot_upgrade.sh --tag 4.9.1`
+- `bash script/ops/chatwoot_upgrade.sh --tag latest`
 
 Ghi chú:
 - Nếu bạn build image local (ví dụ `chatwoot/chatwoot:local`), dùng `--skip-pull` để tránh `docker compose pull` fail:
   - `bash script/ops/chatwoot_upgrade.sh --tag local --skip-pull`
 
 ### 3.2 Thực hiện upgrade
-Ví dụ upgrade lên một version cụ thể:
+Ví dụ upgrade lên một tag cụ thể (`latest` để lấy image mới nhất):
 ```sh
-CW_IMAGE_TAG=4.9.1 docker compose -f docker-compose.production.yaml pull
-CW_IMAGE_TAG=4.9.1 docker compose -f docker-compose.production.yaml up -d
+CW_IMAGE_TAG=latest docker compose -f docker-compose.production.yaml pull
+CW_IMAGE_TAG=latest docker compose -f docker-compose.production.yaml up -d
 ```
 
 Nếu đang chạy overlays (ví dụ Zalo adapter/Caddy), dùng cả hai file khi pull/up:
 ```sh
-CW_IMAGE_TAG=4.9.1 docker compose -f docker-compose.production.yaml -f docker-compose.caddy.yaml pull
-CW_IMAGE_TAG=4.9.1 docker compose -f docker-compose.production.yaml -f docker-compose.caddy.yaml up -d
+CW_IMAGE_TAG=latest docker compose -f docker-compose.production.yaml -f docker-compose.caddy.yaml pull
+CW_IMAGE_TAG=latest docker compose -f docker-compose.production.yaml -f docker-compose.caddy.yaml up -d
 ```
 
 PASS nếu:

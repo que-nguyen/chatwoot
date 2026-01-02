@@ -21,9 +21,9 @@ Options:
   -h, --help              Show this help
 
 Examples:
-  bash script/ops/chatwoot_upgrade.sh --tag 4.9.1
-  bash script/ops/chatwoot_upgrade.sh --env-file .env.production --tag 4.9.1
-  bash script/ops/chatwoot_upgrade.sh --tag 4.9.1 --apply-env-tag
+  bash script/ops/chatwoot_upgrade.sh --tag latest
+  bash script/ops/chatwoot_upgrade.sh --env-file .env.production --tag latest
+  bash script/ops/chatwoot_upgrade.sh --tag latest --apply-env-tag
   bash script/ops/chatwoot_upgrade.sh --tag local --skip-pull
 EOF
 }
