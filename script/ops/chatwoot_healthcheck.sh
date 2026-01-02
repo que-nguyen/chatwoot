@@ -6,27 +6,11 @@ cd "$ROOT_DIR"
 
 env_file="${CW_ENV_FILE:-.env}"
 
-compose_files=()
-if [[ -n "${CW_COMPOSE_FILES:-}" ]]; then
-  # shellcheck disable=SC2206
-  compose_files=(${CW_COMPOSE_FILES})
-else
-  compose_files=(docker-compose.production.yaml)
-fi
-
-compose=(docker compose)
-if [[ -f "$env_file" ]]; then
-  compose+=(--env-file "$env_file")
-else
-  echo "WARN: env file not found at '$env_file' (docker compose will rely on exported env vars)" >&2
-fi
-for file in "${compose_files[@]}"; do
-  compose+=(-f "$file")
-done
+compose=(script/ops/chatwoot_compose.sh --env-file "$env_file")
 
 container_ids="$("${compose[@]}" ps -q || true)"
 if [[ -z "$container_ids" ]]; then
-  echo "No containers found. Is the stack running? (compose files: ${compose_files[*]})" >&2
+  echo "No containers found. Is the stack running? (try: script/ops/chatwoot_compose.sh --env-file '$env_file' ps)" >&2
   exit 2
 fi
 
