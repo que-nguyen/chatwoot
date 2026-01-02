@@ -81,6 +81,12 @@ sudo install -d -m 0750 /etc/chatwoot
 sudoedit /etc/chatwoot/ops.env
 ```
 
+Tip: có thể bắt đầu từ template trong repo:
+```sh
+sudo cp /path/to/chatwoot/script/ops/systemd/ops.env.example /etc/chatwoot/ops.env
+sudoedit /etc/chatwoot/ops.env
+```
+
 Ví dụ nội dung `/etc/chatwoot/ops.env`:
 ```sh
 CW_ENV_FILE=/path/to/chatwoot/.env
