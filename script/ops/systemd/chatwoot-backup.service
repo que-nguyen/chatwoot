@@ -6,6 +6,4 @@ After=network-online.target
 [Service]
 Type=oneshot
 EnvironmentFile=-/etc/chatwoot/ops.env
-WorkingDirectory=/path/to/chatwoot
-ExecStart=/usr/bin/env bash script/ops/chatwoot_backup.sh
-
+ExecStart=/usr/bin/env bash -c 'set -euo pipefail; if [[ -z "${CHATWOOT_ROOT:-}" ]]; then echo "CHATWOOT_ROOT is required (set it in /etc/chatwoot/ops.env)" >&2; exit 2; fi; exec "${CHATWOOT_ROOT}/script/ops/chatwoot_backup.sh"'

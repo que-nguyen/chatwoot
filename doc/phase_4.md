@@ -68,14 +68,13 @@ Repo đã có unit templates:
 - `script/ops/systemd/chatwoot-backup.service`
 - `script/ops/systemd/chatwoot-backup.timer`
 
-1) Copy units lên host và chỉnh path trong unit:
+1) Copy units lên host:
 ```sh
 sudo cp script/ops/systemd/chatwoot-backup.service /etc/systemd/system/chatwoot-backup.service
 sudo cp script/ops/systemd/chatwoot-backup.timer /etc/systemd/system/chatwoot-backup.timer
-sudoedit /etc/systemd/system/chatwoot-backup.service
 ```
 
-2) (Tuỳ chọn) tạo env file cho unit để set overlay compose / retention:
+2) Tạo env file cho unit (bắt buộc) để set path + overlay compose / retention:
 ```sh
 sudo install -d -m 0750 /etc/chatwoot
 sudoedit /etc/chatwoot/ops.env
@@ -89,6 +88,7 @@ sudoedit /etc/chatwoot/ops.env
 
 Ví dụ nội dung `/etc/chatwoot/ops.env`:
 ```sh
+CHATWOOT_ROOT=/path/to/chatwoot
 CW_ENV_FILE=/path/to/chatwoot/.env
 CW_COMPOSE_FILES="docker-compose.production.yaml docker-compose.caddy.yaml"
 CW_BACKUP_KEEP_DAYS=14
@@ -137,15 +137,15 @@ Repo đã có unit templates:
 - `script/ops/systemd/chatwoot-healthcheck.service`
 - `script/ops/systemd/chatwoot-healthcheck.timer`
 
-1) Copy units lên host và chỉnh path trong unit:
+1) Copy units lên host:
 ```sh
 sudo cp script/ops/systemd/chatwoot-healthcheck.service /etc/systemd/system/chatwoot-healthcheck.service
 sudo cp script/ops/systemd/chatwoot-healthcheck.timer /etc/systemd/system/chatwoot-healthcheck.timer
-sudoedit /etc/systemd/system/chatwoot-healthcheck.service
 ```
 
-2) (Tuỳ chọn) tạo `/etc/chatwoot/ops.env` như mục (1.4) để set:
+2) Tạo `/etc/chatwoot/ops.env` như mục (1.4) để set:
 ```sh
+CHATWOOT_ROOT=/path/to/chatwoot
 CW_ENV_FILE=/path/to/chatwoot/.env
 CW_COMPOSE_FILES="docker-compose.production.yaml docker-compose.caddy.yaml"
 CW_ALERT_WEBHOOK_MODE=discord
