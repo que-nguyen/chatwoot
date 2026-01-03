@@ -326,6 +326,26 @@ if [[ -z "$cw_image_tag" || "$cw_image_tag" == "latest" ]]; then
   fi
 else
   check_pass "CW_IMAGE_TAG pinned ('$effective_image_tag')"
+
+  image_ref="chatwoot/chatwoot:${effective_image_tag}"
+  if docker image inspect "$image_ref" >/dev/null 2>&1; then
+    check_pass "Chatwoot image available locally ($image_ref)"
+  else
+    manifest_error=""
+    if manifest_error="$(docker manifest inspect "$image_ref" 2>&1 1>/dev/null)"; then
+      check_pass "Chatwoot image tag found on registry ($image_ref)"
+    else
+      if grep -qiE "manifest unknown|no such manifest|not found|404" <<<"$manifest_error"; then
+        check_fail "Chatwoot image tag not found on registry ($image_ref); set CW_IMAGE_TAG=latest (or choose a valid tag)"
+      else
+        if [[ "$strict_production" -eq 1 ]]; then
+          check_fail "Unable to verify Chatwoot image tag on registry ($image_ref): $(head -n 1 <<<"$manifest_error")"
+        else
+          check_warn "Unable to verify Chatwoot image tag on registry ($image_ref): $(head -n 1 <<<"$manifest_error")"
+        fi
+      fi
+    fi
+  fi
 fi
 
 check_port_free() {

@@ -58,6 +58,7 @@ Ghi chú:
 - Script **không** in ra secret values; chỉ check tồn tại/độ dài và port conflict.
 - Script sẽ WARN nếu disk/RAM trên host quá thấp (check nhanh để tránh start stack trên máy cấu hình yếu).
 - Script sẽ WARN nếu `CW_IMAGE_TAG` chưa pin (mặc định `latest`) — khuyến nghị pin version cho production để tránh upgrade ngoài ý muốn.
+- Nếu `CW_IMAGE_TAG` được pin, preflight sẽ check tag có tồn tại trên registry (hoặc đã có image local); nếu tag không tồn tại sẽ FAIL sớm để tránh `docker compose pull` lỗi `manifest ... not found`. Nếu gặp lỗi này khi cài thử, set `CW_IMAGE_TAG=latest`.
 - Tip (VPS/prod): chạy strict mode để biến các WARN quan trọng thành FAIL:
   - `bash script/ops/chatwoot_preflight.sh --strict-production`
   - Strict mode sẽ yêu cầu `CW_IMAGE_TAG` được pin, và khi bật Caddy overlay thì yêu cầu `CADDY_DOMAIN`, `FORCE_SSL=true`, `FRONTEND_URL` là `https`.

@@ -1,6 +1,6 @@
 # Runbook status
 
-Last verified: 2026-01-02
+Last verified: 2026-01-03
 
 ## Checks executed (local host)
 
@@ -8,6 +8,9 @@ Last verified: 2026-01-02
   - WARN: `CW_IMAGE_TAG` not pinned (effective tag: `latest`)
   - WARN: `CADDY_DOMAIN` unset (defaults to `localhost`, internal CA)
   - NOTE: `ufw` status may require sudo (preflight won't prompt); ensure required ports are allowed (especially `80/443` when using Caddy)
+- Preflight (prod env): `bash script/ops/chatwoot_preflight.sh --env-file .env.production` (OK)
+  - WARN: `CW_IMAGE_TAG` not pinned (effective tag: `latest`)
+  - NOTE: if you pin `CW_IMAGE_TAG` to a non-existent tag, preflight will FAIL early to avoid `docker compose pull` errors (`manifest ... not found`)
 - Preflight (strict production): `bash script/ops/chatwoot_preflight.sh --env-file .env --strict-production` (FAIL)
   - FAIL: `CW_IMAGE_TAG` not pinned (effective tag: `latest`)
   - FAIL: `CADDY_DOMAIN` missing/empty while Caddy overlay is enabled
