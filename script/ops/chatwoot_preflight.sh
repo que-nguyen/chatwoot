@@ -278,6 +278,19 @@ else
   check_fail "env file not found: $env_file (set CW_ENV_FILE or pass --env-file)"
 fi
 
+cw_env_file="$(get_effective_value CW_ENV_FILE "")"
+if [[ "$env_file" != ".env" ]]; then
+  if [[ -z "$cw_env_file" ]]; then
+    check_warn "CW_ENV_FILE is not set while using env file '$env_file'; containers will default to env_file=.env (can cause password mismatch and migrate failures). Set CW_ENV_FILE=$env_file or use script/ops/chatwoot_compose.sh"
+    suggested_env_updates+=("CW_ENV_FILE=$env_file")
+  elif [[ "$cw_env_file" != "$env_file" ]]; then
+    check_warn "CW_ENV_FILE='$cw_env_file' does not match env file '$env_file' (can cause password mismatch and migrate failures). Set CW_ENV_FILE=$env_file"
+    suggested_env_updates+=("CW_ENV_FILE=$env_file")
+  else
+    check_pass "CW_ENV_FILE aligned ($cw_env_file)"
+  fi
+fi
+
 secret_key_base="$(get_effective_value SECRET_KEY_BASE "")"
 if [[ -z "$secret_key_base" ]]; then
   check_fail "SECRET_KEY_BASE is missing/empty"

@@ -187,6 +187,15 @@ Ghi chú:
 - Nguyên nhân: thiếu `POSTGRES_PASSWORD` trong `.env`.
 - Fix: set `POSTGRES_PASSWORD` rồi chạy lại `docker compose up -d`.
 
+### `migrate` exit 1 (`password authentication failed`)
+- Nguyên nhân thường gặp:
+  - dùng `--env-file .env.production` để render Compose nhưng quên set `CW_ENV_FILE=.env.production`, khiến `postgres` đọc `.env.production` còn `migrate/rails` vẫn đọc `.env` → sai password.
+  - đã đổi `POSTGRES_PASSWORD` sau khi Postgres volume đã init (Postgres không tự áp dụng password mới cho role trên volume cũ).
+- Fix:
+  - dùng wrapper: `script/ops/chatwoot_compose.sh --env-file .env.production up -d` (auto-align `CW_ENV_FILE`), hoặc
+  - nếu đang dùng volume cũ: `bash script/ops/chatwoot_postgres_password_sync.sh --env-file .env.production` rồi `docker compose -f docker-compose.production.yaml up -d --force-recreate migrate rails sidekiq`, hoặc
+  - set `CW_ENV_FILE=.env.production` (có thể đặt ngay trong `.env.production`) rồi recreate: `docker compose -f docker-compose.production.yaml up -d --force-recreate migrate rails sidekiq`
+
 ### `REDIS_PASSWORD is required`
 - Nguyên nhân: thiếu `REDIS_PASSWORD` trong `.env`.
 - Fix: set `REDIS_PASSWORD` rồi restart service:

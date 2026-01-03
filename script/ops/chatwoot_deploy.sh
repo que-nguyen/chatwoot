@@ -110,6 +110,10 @@ get_effective_value() {
 echo "== Chatwoot deploy (compose) =="
 echo "env file: $env_file"
 
+if [[ -z "${CW_ENV_FILE:-}" ]]; then
+  export CW_ENV_FILE="$env_file"
+fi
+
 preflight_args=(--env-file "$env_file")
 if [[ "$apply_env_updates" -eq 1 ]]; then
   preflight_args+=(--apply-env-updates)
@@ -119,11 +123,21 @@ if [[ "$strict_production" -eq 1 ]]; then
 fi
 bash script/ops/chatwoot_preflight.sh "${preflight_args[@]}"
 
-script/ops/chatwoot_compose.sh --env-file "$env_file" up -d
+compose=(script/ops/chatwoot_compose.sh --env-file "$env_file")
+
+echo "INFO: starting dependencies (postgres/redis)..." >&2
+"${compose[@]}" up -d postgres redis
+
+# Postgres ignores POSTGRES_PASSWORD on existing volumes. If the env file password
+# changes later, rails/migrate will fail with "password authentication failed".
+echo "INFO: verifying Postgres credentials..." >&2
+bash script/ops/chatwoot_postgres_password_sync.sh --env-file "$env_file"
+
+"${compose[@]}" up -d
 
 if [[ "$follow_logs" -eq 1 ]]; then
   echo "INFO: Following logs (Ctrl-C to stop)..." >&2
-  script/ops/chatwoot_compose.sh --env-file "$env_file" logs -f --tail=200 migrate rails sidekiq postgres redis || true
+  "${compose[@]}" logs -f --tail=200 migrate rails sidekiq postgres redis || true
 fi
 
 if [[ "$skip_smoketest" -eq 0 ]]; then

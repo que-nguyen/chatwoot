@@ -193,6 +193,12 @@ bash script/ops/chatwoot_smoketest.sh --env-file .env.production
 script/ops/chatwoot_compose.sh --env-file .env.production logs --tail=300 migrate
 ```
 
+**Nếu log có `password authentication failed` (Postgres):** thường do mismatch giữa file dùng để render Compose (`--env-file`) và file inject vào container (`CW_ENV_FILE`), ví dụ `postgres` đọc `.env.production` nhưng `migrate/rails` lại đọc `.env`.  
+**Fix:** dùng wrapper `script/ops/chatwoot_compose.sh --env-file .env.production ...` (auto-align `CW_ENV_FILE`), hoặc set `CW_ENV_FILE=.env.production` rồi recreate `migrate`/`rails`/`sidekiq`.
+
+**Nếu bạn đã đổi `POSTGRES_PASSWORD` trên volume Postgres đã init:** Postgres sẽ không tự áp dụng password mới.  
+**Fix:** chạy `bash script/ops/chatwoot_postgres_password_sync.sh --env-file .env.production` để sync role password theo env file (không mất dữ liệu), rồi `up -d` lại.
+
 **Fix thường gặp:** sai `POSTGRES_PASSWORD`, volume DB lỗi, disk full → sửa root-cause rồi chạy lại `up -d`.
 
 ### 7.4 Không truy cập được từ bên ngoài VPS

@@ -20,10 +20,12 @@ EOF
 }
 
 env_file="${CW_ENV_FILE:-.env}"
+env_file_explicit=0
 if [[ $# -gt 0 ]]; then
   case "$1" in
     -e|--env-file)
       env_file="${2:-}"
+      env_file_explicit=1
       shift 2
       ;;
     -h|--help)
@@ -81,6 +83,9 @@ get_effective_value() {
 # same env file via compose's `env_file:` (driven by CW_ENV_FILE). Auto-align
 # unless CW_ENV_FILE is explicitly set in the environment or env file.
 cw_env_file_value="$(get_effective_value CW_ENV_FILE "")"
+if [[ "$env_file_explicit" -eq 1 && -n "$cw_env_file_value" && "$cw_env_file_value" != "$env_file" ]]; then
+  echo "WARN: CW_ENV_FILE='$cw_env_file_value' differs from --env-file '$env_file'; services may load a different env file than compose rendering (can break migrate). Set CW_ENV_FILE=$env_file to align" >&2
+fi
 if [[ -z "$cw_env_file_value" && -f "$env_file" ]]; then
   export CW_ENV_FILE="$env_file"
   if [[ "$env_file" != ".env" ]]; then

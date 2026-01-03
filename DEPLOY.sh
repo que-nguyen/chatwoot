@@ -234,6 +234,10 @@ ensure_required_secrets() {
 }
 
 ensure_sane_defaults() {
+  # Align compose rendering (`--env-file`) with container env injection (`env_file:`)
+  # to avoid situations where postgres reads one file but rails/migrate read another.
+  set_env_value CW_ENV_FILE "$env_file" "$env_file"
+
   if [[ -n "$frontend_url" ]]; then
     set_env_value FRONTEND_URL "$frontend_url" "$env_file"
   else
